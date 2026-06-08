@@ -1,7 +1,8 @@
-import { INDUSTRIES_DATA }  from '../data/industries';
-import { DEPARTMENTS_DATA } from '../data/departments';
-import { SENIORITY_LEVELS } from '../data/seniority';
-import type { AppConfig }   from '../types';
+import { INDUSTRIES_DATA }       from '../data/industries';
+import { DEPARTMENTS_DATA }      from '../data/departments';
+import { SENIORITY_LEVELS }      from '../data/seniority';
+import { PRODUCT_CATEGORIES_DATA } from '../data/productCategories';
+import type { AppConfig }        from '../types';
 
 export function buildExecutionPrompt(config: AppConfig): string {
   const industryData  = INDUSTRIES_DATA.find(i => i.industry === config.industry);
@@ -12,6 +13,11 @@ export function buildExecutionPrompt(config: AppConfig): string {
   // ── Resolve department ────────────────────────────────────────────────────
   const industryDepts = DEPARTMENTS_DATA.find(d => d.industry === config.industry)?.departments ?? [];
   const deptData      = industryDepts.find(d => d.id === config.department) ?? null;
+
+  // ── Resolve product categories (Distribution Company only) ────────────────
+  const selectedCats = (config.productCategories ?? [])
+    .map(id => PRODUCT_CATEGORIES_DATA.find(c => c.id === id))
+    .filter((c): c is NonNullable<typeof c> => !!c);
 
   // ── Build sections ────────────────────────────────────────────────────────
   const focuses = industryData.focuses.map((f, i) => `  ${i + 1}. ${f}`).join('\n');
@@ -36,6 +42,27 @@ Calibrate language, responsibilities, and decision-making authority accordingly.
 Blend the department sub-focuses above with the broader industry focus areas.
 Each stage must clearly connect to BOTH its assigned industry focus_area AND the
 department's operational context.
+`
+    : '';
+
+  const productCategorySection = selectedCats.length > 0
+    ? `
+## PRODUCT PORTFOLIO CONTEXT (Priority Injection — Distribution Company)
+This distribution company handles the following product categories. Every
+scenario must reflect the SPECIFIC handling requirements, risks, and workflows
+of the relevant category for the trainee's role:
+
+${selectedCats.map((cat, i) => `### ${i + 1}. ${cat.emoji} ${cat.name}
+- Storage Temperature: ${cat.tempRange}
+- Shelf Life / Urgency: ${cat.shelfLife}
+- Handling Requirements: ${cat.handling}
+- Category-Specific Risks: ${cat.keyRisks.join(', ')}
+- Example SKUs: ${cat.examples.join(', ')}`).join('\n\n')}
+
+When writing operational scenarios, reference these product categories directly
+(e.g., temperature breach on a frozen delivery, FEFO violation on fresh produce,
+damaged canned goods on GRN). Emergency scenarios must be plausible within the
+context of the above categories' cold chain / handling requirements.
 `
     : '';
 
@@ -66,6 +93,7 @@ realistic, and contextually accurate.
 ## TARGET PROFILE
 - Industry:    ${config.industry}
 - Department:  ${deptData ? deptData.name : 'Cross-functional (no specific department)'}
+- Product Categories: ${selectedCats.length > 0 ? selectedCats.map(c => `${c.emoji} ${c.name}`).join(', ') : 'All / Not specified'}
 - Job Title:   ${config.jobTitle}
 - Seniority:   ${seniorityData.label}
 - Tonal Frame: ${seniorityData.tone}
@@ -77,6 +105,7 @@ ${focuses}
 
 ### Key Risk Factors (use as risk_context across stages):
 ${risks}
+${productCategorySection}
 ${policySection}
 ## LANGUAGE REQUIREMENTS
 1. All trilingual fields (title_en, title_ar, title_ku) must be fully written —
@@ -177,6 +206,7 @@ interface Output {
 □ All exam IDs are unique integers 1–7
 □ JSON is syntactically valid (no trailing commas, no inline comments)
 ${deptData ? `□ All scenarios reflect the ${deptData.name} department context\n□ Department sub-focuses are embedded across scenarios` : ''}
+${selectedCats.length > 0 ? `□ Product categories (${selectedCats.map(c => c.name).join(', ')}) are referenced in operational and emergency scenarios\n□ Temperature, shelf life, and handling requirements match each category's specifications` : ''}
 
 BEGIN OUTPUT NOW:`;
 }

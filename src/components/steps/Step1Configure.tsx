@@ -3,9 +3,10 @@ import {
   Settings2, Briefcase, AlertTriangle, Target, ChevronRight,
   Building2, FileText, Info, LayoutGrid, Sparkles,
 } from 'lucide-react';
-import { INDUSTRIES_DATA }   from '../../data/industries';
-import { DEPARTMENTS_DATA }  from '../../data/departments';
-import { SENIORITY_LEVELS }  from '../../data/seniority';
+import { INDUSTRIES_DATA }        from '../../data/industries';
+import { DEPARTMENTS_DATA }       from '../../data/departments';
+import { SENIORITY_LEVELS }       from '../../data/seniority';
+import { PRODUCT_CATEGORIES_DATA } from '../../data/productCategories';
 import { Button }    from '../ui/Button';
 import { Badge }     from '../ui/Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
@@ -51,8 +52,18 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
   const touch = (f: keyof typeof touched) => setTouched(t => ({ ...t, [f]: true }));
 
   const handleIndustryChange = (v: string) => {
-    onConfigChange({ ...config, industry: v, department: '' });
+    onConfigChange({ ...config, industry: v, department: '', productCategories: [] });
     touch('industry');
+  };
+
+  const isDistribution = config.industry === 'Distribution Company';
+
+  const toggleCategory = (id: string) => {
+    const current = config.productCategories ?? [];
+    const updated = current.includes(id)
+      ? current.filter(c => c !== id)
+      : [...current, id];
+    onConfigChange({ ...config, productCategories: updated });
   };
 
   const handleNext = () => {
@@ -60,7 +71,7 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
     const errs = validate(config);
     setErrors(errs);
     if (Object.keys(errs).length) return;
-    analytics.track('step_1_completed', { industry: config.industry, department: config.department || '(none)', seniority: config.seniorityId, hasPolicy: config.policyText.trim().length > 0 });
+    analytics.track('step_1_completed', { industry: config.industry, department: config.department || '(none)', productCategories: (config.productCategories ?? []).join(',') || '(none)', seniority: config.seniorityId, hasPolicy: config.policyText.trim().length > 0 });
     onNext();
   };
 
@@ -309,6 +320,106 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
             )}
           </CardContent>
         </Card>
+
+        {/* ── PRODUCT CATEGORIES (Distribution Company only) ── */}
+        {isDistribution && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-orange-500/15 border border-orange-500/25 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm">🛒</span>
+                </div>
+                <div>
+                  <CardTitle>
+                    Product Categories
+                    <span className="text-slate-600 font-normal text-xs ml-2">(Optional — select all that apply)</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Select the product portfolio handled. Each category's temperature, shelf life and handling requirements are injected into the AI prompt.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {PRODUCT_CATEGORIES_DATA.map(cat => {
+                  const isSel = (config.productCategories ?? []).includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => toggleCategory(cat.id)}
+                      aria-pressed={isSel}
+                      className={cn(
+                        'flex items-start gap-2 p-3 rounded-xl border text-left transition-all duration-150',
+                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60',
+                        isSel
+                          ? 'border-orange-500/50 bg-orange-500/10'
+                          : 'border-white/8 bg-white/2 hover:border-white/16 hover:bg-white/5',
+                      )}
+                    >
+                      <span className="text-lg flex-shrink-0 leading-none mt-0.5">{cat.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn('font-medium text-sm leading-tight', isSel ? 'text-orange-300' : 'text-slate-300')}>
+                          {cat.name}
+                        </p>
+                        <p className="text-xs text-slate-600 mt-0.5 leading-snug">{cat.tempRange}</p>
+                      </div>
+                      <div className={cn(
+                        'w-3.5 h-3.5 rounded border-2 flex-shrink-0 mt-0.5 transition-all',
+                        isSel ? 'border-orange-400 bg-orange-400' : 'border-slate-600',
+                      )} />
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected category detail cards */}
+              {(config.productCategories ?? []).length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Selected Category Details — injected into AI prompt:
+                  </p>
+                  {PRODUCT_CATEGORIES_DATA
+                    .filter(cat => (config.productCategories ?? []).includes(cat.id))
+                    .map(cat => (
+                      <div key={cat.id} className="rounded-xl border border-orange-500/20 bg-orange-500/6 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-base">{cat.emoji}</span>
+                          <span className="font-semibold text-sm text-orange-300">{cat.name}</span>
+                          <span className="text-xs text-orange-500 ml-auto">{cat.tempRange}</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-slate-500 font-medium">Shelf Life: </span>
+                            <span className="text-slate-400">{cat.shelfLife}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 font-medium">Key Risks: </span>
+                            <span className="text-slate-400">{cat.keyRisks.join(' · ')}</span>
+                          </div>
+                        </div>
+                        <div className="mt-1.5 text-xs">
+                          <span className="text-slate-500 font-medium">Examples: </span>
+                          <span className="text-slate-500">{cat.examples.join(', ')}</span>
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {cat.examples.slice(0, 5).map((ex, i) => (
+                            <span key={i} className="text-xs px-1.5 py-0.5 bg-orange-500/15 text-orange-400 border border-orange-500/20 rounded-full">{ex}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  <button
+                    onClick={() => onConfigChange({ ...config, productCategories: [] })}
+                    className="text-xs text-slate-600 hover:text-red-400 transition-colors flex items-center gap-1 mt-1"
+                  >
+                    ✕ Clear all categories
+                  </button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* ── POLICY PATCH ── */}
         <Card>

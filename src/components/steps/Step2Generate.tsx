@@ -3,9 +3,10 @@ import {
   Copy, Check, Download, ChevronRight, ChevronLeft,
   Wand2, Building2, User, Layers, FileText, AlertCircle, LayoutGrid,
 } from 'lucide-react';
-import { INDUSTRIES_DATA }  from '../../data/industries';
-import { DEPARTMENTS_DATA } from '../../data/departments';
-import { SENIORITY_LEVELS } from '../../data/seniority';
+import { INDUSTRIES_DATA }        from '../../data/industries';
+import { DEPARTMENTS_DATA }       from '../../data/departments';
+import { SENIORITY_LEVELS }       from '../../data/seniority';
+import { PRODUCT_CATEGORIES_DATA } from '../../data/productCategories';
 import { Button }    from '../ui/Button';
 import { Badge }     from '../ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
@@ -28,6 +29,9 @@ export const Step2Generate: React.FC<Step2Props> = ({ config, onBack, onNext }) 
   const selectedSeniority = SENIORITY_LEVELS.find(s => s.id === config.seniorityId);
   const industryDepts     = DEPARTMENTS_DATA.find(d => d.industry === config.industry)?.departments ?? [];
   const selectedDept      = industryDepts.find(d => d.id === config.department) ?? null;
+  const selectedCats      = (config.productCategories ?? [])
+    .map(id => PRODUCT_CATEGORIES_DATA.find(c => c.id === id))
+    .filter((c): c is NonNullable<typeof c> => !!c);
 
   const handleCopy = async () => {
     try {
@@ -76,6 +80,16 @@ export const Step2Generate: React.FC<Step2Props> = ({ config, onBack, onNext }) 
             <CardContent className="space-y-3.5">
               <SRow icon={<Building2 className="h-3.5 w-3.5 text-blue-400"/>} bg="bg-blue-500/15" label="Industry" value={config.industry}/>
               {selectedDept && <SRow icon={<LayoutGrid className="h-3.5 w-3.5 text-violet-400"/>} bg="bg-violet-500/15" label="Department" value={`${selectedDept.emoji} ${selectedDept.name}`}/>}
+              {selectedCats.length > 0 && (
+                <div>
+                  <p className="text-xs text-slate-600 font-medium mb-1.5">🛒 Product Categories ({selectedCats.length})</p>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedCats.map(cat => (
+                      <Badge key={cat.id} variant="warning" className="text-xs">{cat.emoji} {cat.name}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
               <SRow icon={<User className="h-3.5 w-3.5 text-purple-400"/>} bg="bg-purple-500/15" label="Job Title" value={config.jobTitle}/>
               <SRow icon={<Layers className="h-3.5 w-3.5 text-indigo-400"/>} bg="bg-indigo-500/15" label="Seniority" value={selectedSeniority?.label ?? '—'} sub={selectedSeniority?.tone}/>
               {config.policyText.trim() && <SRow icon={<FileText className="h-3.5 w-3.5 text-teal-400"/>} bg="bg-teal-500/15" label="Policy Patch" value={`✓ ${config.policyText.trim().split(/\s+/).length} words injected`} valueClass="text-emerald-400"/>}

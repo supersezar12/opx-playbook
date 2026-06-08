@@ -16,7 +16,7 @@ import { DEPARTMENTS_DATA } from './data/departments';
 import type { AppConfig, TrainingPayload, ExportOptions, WizardStep, DraftSnapshot } from './types';
 
 const DEFAULT_CONFIG: AppConfig = {
-  industry: '', department: '', jobTitle: '', seniorityId: '', policyText: '',
+  industry: '', department: '', productCategories: [], jobTitle: '', seniorityId: '', policyText: '',
 };
 const DEFAULT_EXPORT: ExportOptions = {
   antiCopy: true, bilingualToggle: true, matrixTitle: '',
@@ -59,7 +59,10 @@ export default function App() {
       const deptName = DEPARTMENTS_DATA
         .find(d => d.industry === config.industry)?.departments
         .find(d => d.id === config.department)?.name ?? '';
-      const titleParts = [config.jobTitle, deptName || config.industry, 'Training Matrix']
+      const catSuffix = config.productCategories.length > 0
+        ? `(${config.productCategories.slice(0, 2).join(', ')}${config.productCategories.length > 2 ? '...' : ''})`
+        : '';
+      const titleParts = [config.jobTitle, deptName || config.industry, catSuffix, 'Training Matrix']
         .filter(Boolean).join(' - ');
       setExportOptions(prev => ({
         ...prev,

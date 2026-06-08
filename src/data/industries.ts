@@ -355,7 +355,7 @@ export const INDUSTRIES_DATA: IndustryData[] = [
       'Principal Contract Loss or Renegotiation',
       'Receivables Default & Bad Debt',
       'Fuel & Transport Cost Spikes',
-      'Counterfeit & Diversion Risk',
+      'Counterfeit & Product Diversion Risk',
     ],
   },
 ];

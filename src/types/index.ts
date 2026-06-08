@@ -45,7 +45,8 @@ export interface TrainingPayload {
 // ─── App Configuration ────────────────────────────────────────────────────────
 export interface AppConfig {
   industry: string;
-  department: string;       // department id (e.g. 'fmcg_sales') — optional
+  department: string;           // department id (e.g. 'fmcg_sales') — optional
+  productCategories: string[];  // product category ids — only for Distribution Company
   jobTitle: string;
   seniorityId: 'entry' | 'junior' | 'senior' | '';
   policyText: string;
