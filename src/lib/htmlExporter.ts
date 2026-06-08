@@ -1,4 +1,5 @@
 import type { TrainingPayload, ExportOptions, AppConfig } from '../types';
+import { DEPARTMENTS_DATA } from '../data/departments';
 
 export function buildHtmlExport(
   payload: TrainingPayload,
@@ -7,6 +8,11 @@ export function buildHtmlExport(
 ): string {
   const payloadJson = JSON.stringify(payload, null, 2);
   const title = options.matrixTitle || `${config.jobTitle} - ${config.industry} Training Matrix`;
+
+  // Resolve department name for display
+  const deptData = DEPARTMENTS_DATA
+    .find(d => d.industry === config.industry)?.departments
+    .find(d => d.id === config.department) ?? null;
 
   const antiCopyScript = options.antiCopy
     ? `
@@ -209,6 +215,7 @@ export function buildHtmlExport(
   <p>A Progressive Bilingual Training Matrix — Arabic &amp; Kurdish</p>
   <div class="meta-bar">
     <span class="meta-pill">🏭 ${escHtml(config.industry)}</span>
+    ${deptData ? `<span class="meta-pill">${escHtml(deptData.emoji)} ${escHtml(deptData.name)}</span>` : ''}
     <span class="meta-pill">👤 ${escHtml(config.jobTitle)}</span>
     <span class="meta-pill">📊 ${escHtml(config.seniorityId)}</span>
     <span class="meta-pill">📅 ${generatedDate}</span>

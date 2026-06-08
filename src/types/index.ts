@@ -45,6 +45,7 @@ export interface TrainingPayload {
 // ─── App Configuration ────────────────────────────────────────────────────────
 export interface AppConfig {
   industry: string;
+  department: string;       // department id (e.g. 'fmcg_sales') — optional
   jobTitle: string;
   seniorityId: 'entry' | 'junior' | 'senior' | '';
   policyText: string;
@@ -60,6 +61,7 @@ export interface ValidationResult {
 // ─── Field-level Errors (per step) ───────────────────────────────────────────
 export interface Step1Errors {
   industry?: string;
+  department?: string;
   jobTitle?: string;
   seniorityId?: string;
 }

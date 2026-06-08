@@ -14,6 +14,7 @@
  */
 
 import type { TrainingPayload, AppConfig, ExportOptions } from '../types';
+import { DEPARTMENTS_DATA } from '../data/departments';
 
 export function buildPdfHtml(
   payload: TrainingPayload,
@@ -24,6 +25,12 @@ export function buildPdfHtml(
   const date = new Date().toLocaleDateString('en-GB', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
+
+  // Resolve department
+  const deptData = DEPARTMENTS_DATA
+    .find(d => d.industry === config.industry)?.departments
+    .find(d => d.id === config.department) ?? null;
+
   const seniorityLabel: Record<string, string> = {
     entry: 'Entry-Level / Operator',
     junior: 'Junior Management / Supervisor',
@@ -281,6 +288,7 @@ export function buildPdfHtml(
   <div class="cover-sub">Progressive Bilingual Corporate Training Matrix<br>Arabic (العربية) · Kurdish (کوردی) · English</div>
   <div class="cover-pills">
     <span class="cover-pill">🏭 ${esc(config.industry)}</span>
+    ${deptData ? `<span class="cover-pill">${esc(deptData.emoji)} ${esc(deptData.name)}</span>` : ''}
     <span class="cover-pill">👤 ${esc(config.jobTitle)}</span>
     <span class="cover-pill">📊 ${esc(seniorityLabel[config.seniorityId] ?? config.seniorityId)}</span>
     <span class="cover-pill">📚 ${payload.stages.length} Stages · ${payload.exams.length} Exams</span>
@@ -309,6 +317,7 @@ ${examCardsHtml}
   </div>
   <div class="cert-body">
     Industry: <strong>${esc(config.industry)}</strong><br>
+    ${deptData ? `Department: <strong>${esc(deptData.emoji)} ${esc(deptData.name)}</strong><br>` : ''}
     Role: <strong>${esc(config.jobTitle)}</strong><br>
     Seniority: <strong>${esc(seniorityLabel[config.seniorityId] ?? config.seniorityId)}</strong>
   </div>

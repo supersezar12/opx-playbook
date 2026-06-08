@@ -11,10 +11,11 @@ import { ToastContainer, useToast } from './components/ui/Toast';
 import { storage }          from './lib/localStorage';
 import { drafts }           from './lib/drafts';
 import { analytics }        from './lib/analytics';
+import { DEPARTMENTS_DATA } from './data/departments';
 import type { AppConfig, TrainingPayload, ExportOptions, WizardStep, DraftSnapshot } from './types';
 
 const DEFAULT_CONFIG: AppConfig = {
-  industry: '', jobTitle: '', seniorityId: '', policyText: '',
+  industry: '', department: '', jobTitle: '', seniorityId: '', policyText: '',
 };
 const DEFAULT_EXPORT: ExportOptions = {
   antiCopy: true, bilingualToggle: true, matrixTitle: '',
@@ -54,9 +55,14 @@ export default function App() {
     if (!hydrated) return;
     storage.saveConfig(config);
     if (config.jobTitle && config.industry) {
+      const deptName = DEPARTMENTS_DATA
+        .find(d => d.industry === config.industry)?.departments
+        .find(d => d.id === config.department)?.name ?? '';
+      const titleParts = [config.jobTitle, deptName || config.industry, 'Training Matrix']
+        .filter(Boolean).join(' - ');
       setExportOptions(prev => ({
         ...prev,
-        matrixTitle: prev.matrixTitle || `${config.jobTitle} - ${config.industry} Training Matrix`,
+        matrixTitle: prev.matrixTitle || titleParts,
       }));
     }
   }, [config, hydrated]);

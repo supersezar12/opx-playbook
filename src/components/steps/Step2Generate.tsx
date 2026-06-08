@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Copy, Check, Download, ChevronRight, ChevronLeft,
-  Wand2, Building2, User, Layers, FileText, AlertCircle,
+  Wand2, Building2, User, Layers, FileText, AlertCircle, LayoutGrid,
 } from 'lucide-react';
 import { INDUSTRIES_DATA } from '../../data/industries';
+import { DEPARTMENTS_DATA } from '../../data/departments';
 import { SENIORITY_LEVELS } from '../../data/seniority';
 import { Button }   from '../ui/Button';
 import { Badge }    from '../ui/Badge';
@@ -29,6 +30,8 @@ export const Step2Generate: React.FC<Step2Props> = ({ config, onBack, onNext }) 
 
   const selectedIndustry  = INDUSTRIES_DATA.find(i => i.industry === config.industry);
   const selectedSeniority = SENIORITY_LEVELS.find(s => s.id === config.seniorityId);
+  const industryDepts     = DEPARTMENTS_DATA.find(d => d.industry === config.industry)?.departments ?? [];
+  const selectedDept      = industryDepts.find(d => d.id === config.department) ?? null;
 
   const handleCopy = async () => {
     try {
@@ -91,6 +94,10 @@ export const Step2Generate: React.FC<Step2Props> = ({ config, onBack, onNext }) 
             <CardContent className="space-y-4">
               <SummaryRow icon={<Building2 className="h-4 w-4 text-blue-600" />} bg="bg-blue-100"
                 label="Industry" value={config.industry} />
+              {selectedDept && (
+                <SummaryRow icon={<LayoutGrid className="h-4 w-4 text-violet-600" />} bg="bg-violet-100"
+                  label="Department" value={`${selectedDept.emoji} ${selectedDept.name}`} />
+              )}
               <SummaryRow icon={<User className="h-4 w-4 text-purple-600" />} bg="bg-purple-100"
                 label="Job Title" value={config.jobTitle} />
               <SummaryRow icon={<Layers className="h-4 w-4 text-indigo-600" />} bg="bg-indigo-100"

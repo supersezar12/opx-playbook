@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   ChevronLeft, Download, Package, Eye, Trophy, RefreshCw,
   ShieldCheck, Languages, FileText, CheckCircle2, Sparkles,
-  LayoutTemplate, AlertCircle, FileDown,
+  LayoutTemplate, AlertCircle, FileDown, LayoutGrid,
 } from 'lucide-react';
 import { Button }   from '../ui/Button';
 import { Badge }    from '../ui/Badge';
@@ -15,6 +15,7 @@ import { exportAsPdf }     from '../../lib/pdfExporter';
 import { storage }   from '../../lib/localStorage';
 import { analytics } from '../../lib/analytics';
 import { formatDate, slugify } from '../../lib/utils';
+import { DEPARTMENTS_DATA } from '../../data/departments';
 import type { TrainingPayload, AppConfig, ExportOptions, Step5Errors } from '../../types';
 
 interface Step5Props {
@@ -38,6 +39,11 @@ export const Step5Export: React.FC<Step5Props> = ({
   const [errors,         setErrors]         = useState<Step5Errors>({});
 
   const defaultTitle = `${config.jobTitle} - ${config.industry} Training Matrix`;
+
+  // Resolve department for display
+  const deptData = DEPARTMENTS_DATA
+    .find(d => d.industry === config.industry)?.departments
+    .find(d => d.id === config.department) ?? null;
 
   function validate(): Step5Errors {
     const errs: Step5Errors = {};
@@ -223,6 +229,16 @@ export const Step5Export: React.FC<Step5Props> = ({
             </div>
           </CardHeader>
           <CardContent>
+            {/* Department pill */}
+            {deptData && (
+              <div className="flex items-center gap-2 mb-4 p-3 bg-violet-50 border border-violet-200 rounded-xl">
+                <LayoutGrid className="h-4 w-4 text-violet-600 flex-shrink-0" />
+                <span className="text-sm font-medium text-violet-800">
+                  {deptData.emoji} {deptData.name}
+                </span>
+                <span className="text-xs text-violet-500 ml-1">department scope applied</span>
+              </div>
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center mb-5">
               <SumCard value={payload.stages.length} label="Stages"       color="text-blue-600"    />
               <SumCard value={payload.exams.length}  label="Exams"        color="text-purple-600"  />
