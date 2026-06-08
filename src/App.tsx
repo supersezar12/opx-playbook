@@ -112,17 +112,17 @@ export default function App() {
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-500">Restoring your session...</p>
+          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-500">Restoring your session...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-base)' }}>
 
       {/* ─── Persistent Header ─────────────────────────────── */}
       <Header
@@ -190,7 +190,7 @@ export default function App() {
             </p>
             <button
               onClick={() => goToStep(3)}
-              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              className="bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 px-6 py-3 rounded-xl font-semibold hover:from-amber-400 hover:to-yellow-300 transition-colors"
             >
               Go to Ingest →
             </button>
@@ -199,8 +199,8 @@ export default function App() {
       </main>
 
       {/* ─── Footer ────────────────────────────────────────── */}
-      <footer className="border-t border-gray-200 bg-white py-4 px-4 text-center">
-        <p className="text-xs text-gray-400">
+      <footer className="border-t border-white/6 py-4 px-4 text-center" style={{ background: "rgba(10,13,20,0.95)" }}>
+        <p className="text-xs text-slate-600">
           OPX Playbook Builder &nbsp;·&nbsp; Bilingual Corporate Training Matrix Factory
           &nbsp;·&nbsp; All data stored locally — no backend, no API keys
         </p>

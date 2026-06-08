@@ -6,15 +6,15 @@ import {
 import { INDUSTRIES_DATA }   from '../../data/industries';
 import { DEPARTMENTS_DATA }  from '../../data/departments';
 import { SENIORITY_LEVELS }  from '../../data/seniority';
-import { Button }      from '../ui/Button';
-import { Badge }       from '../ui/Badge';
+import { Button }    from '../ui/Button';
+import { Badge }     from '../ui/Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
-import { Select }      from '../ui/Select';
-import { Input }       from '../ui/Input';
-import { Textarea }    from '../ui/Textarea';
-import { Alert }       from '../ui/Alert';
-import { cn }          from '../../lib/utils';
-import { analytics }   from '../../lib/analytics';
+import { Select }    from '../ui/Select';
+import { Input }     from '../ui/Input';
+import { Textarea }  from '../ui/Textarea';
+import { Alert }     from '../ui/Alert';
+import { cn }        from '../../lib/utils';
+import { analytics } from '../../lib/analytics';
 import type { AppConfig, Step1Errors } from '../../types';
 
 interface Step1Props {
@@ -23,117 +23,89 @@ interface Step1Props {
   onNext: () => void;
 }
 
-// ─── Validation ───────────────────────────────────────────────────────────────
 function validate(config: AppConfig): Step1Errors {
-  const errs: Step1Errors = {};
-  if (!config.industry.trim())
-    errs.industry = 'Please select an industry sector.';
-  if (!config.jobTitle.trim())
-    errs.jobTitle = 'Job title is required.';
-  else if (config.jobTitle.trim().length < 3)
-    errs.jobTitle = 'Job title must be at least 3 characters.';
-  else if (config.jobTitle.trim().length > 120)
-    errs.jobTitle = 'Job title must be 120 characters or fewer.';
-  if (!config.seniorityId)
-    errs.seniorityId = 'Please select a seniority level.';
-  return errs;
+  const e: Step1Errors = {};
+  if (!config.industry.trim()) e.industry = 'Please select an industry sector.';
+  if (!config.jobTitle.trim()) e.jobTitle = 'Job title is required.';
+  else if (config.jobTitle.trim().length < 3) e.jobTitle = 'Must be at least 3 characters.';
+  else if (config.jobTitle.trim().length > 120) e.jobTitle = 'Must be 120 characters or fewer.';
+  if (!config.seniorityId) e.seniorityId = 'Please select a seniority level.';
+  return e;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, onNext }) => {
-  const [touched, setTouched] = useState({
-    industry: false, department: false, jobTitle: false, seniorityId: false,
-  });
-  const [errors, setErrors] = useState<Step1Errors>({});
+const SENIORITY_ICONS: Record<string, string> = { entry: '🔧', junior: '📊', senior: '🎯' };
 
-  // Derived data
+export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, onNext }) => {
+  const [touched, setTouched] = useState({ industry: false, department: false, jobTitle: false, seniorityId: false });
+  const [errors, setErrors]   = useState<Step1Errors>({});
+
   const selectedIndustry  = INDUSTRIES_DATA.find(i => i.industry === config.industry);
   const selectedSeniority = SENIORITY_LEVELS.find(s => s.id === config.seniorityId);
   const industryDepts     = DEPARTMENTS_DATA.find(d => d.industry === config.industry)?.departments ?? [];
   const selectedDept      = industryDepts.find(d => d.id === config.department) ?? null;
 
-  // Live re-validate once any field touched
   useEffect(() => {
     if (Object.values(touched).some(Boolean)) setErrors(validate(config));
   }, [config, touched]);
 
-  // When industry changes, clear department
+  const touch = (f: keyof typeof touched) => setTouched(t => ({ ...t, [f]: true }));
+
   const handleIndustryChange = (v: string) => {
     onConfigChange({ ...config, industry: v, department: '' });
     touch('industry');
   };
 
-  // When department is selected, auto-suggest a job title hint if field is empty
-  const handleDeptChange = (deptId: string) => {
-    const dept = industryDepts.find(d => d.id === deptId);
-    onConfigChange({
-      ...config,
-      department: deptId,
-      // Auto-fill job title placeholder suggestion (not the value itself)
-    });
-    touch('department');
-    void dept; // used in placeholder below
-  };
-
-  const touch = (field: keyof typeof touched) =>
-    setTouched(t => ({ ...t, [field]: true }));
-
   const handleNext = () => {
     setTouched({ industry: true, department: true, jobTitle: true, seniorityId: true });
     const errs = validate(config);
     setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-    analytics.track('step_1_completed', {
-      industry:   config.industry,
-      department: config.department || '(none)',
-      seniority:  config.seniorityId,
-      hasPolicy:  config.policyText.trim().length > 0,
-    });
+    if (Object.keys(errs).length) return;
+    analytics.track('step_1_completed', { industry: config.industry, department: config.department || '(none)', seniority: config.seniorityId, hasPolicy: config.policyText.trim().length > 0 });
     onNext();
   };
 
   const errorCount = Object.keys(errors).length;
   const allTouched = touched.industry && touched.jobTitle && touched.seniorityId;
-
-  // Job title placeholder: use typical roles from selected dept if available
-  const titlePlaceholder = selectedDept?.typicalRoles.slice(0, 2).join(', ') ??
-    'e.g., Drilling Floor Supervisor';
+  const titlePlaceholder = selectedDept?.typicalRoles.slice(0, 2).join(', ') ?? 'e.g., Drilling Floor Supervisor';
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 step-transition">
+    <div className="max-w-2xl mx-auto px-4 py-10 step-transition">
 
-      {/* Page header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-100 rounded-2xl mb-4">
-          <Settings2 className="h-7 w-7 text-blue-600" />
+      {/* ── Page header ── */}
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5 relative">
+          <div className="absolute inset-0 rounded-2xl bg-amber-500/20 blur-md" />
+          <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-600/10 border border-amber-500/30 flex items-center justify-center">
+            <Settings2 className="h-6 w-6 text-amber-400" />
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Context Configurator</h1>
-        <p className="text-gray-500 mt-2 text-sm max-w-md mx-auto">
-          Define the training context. Industry → Department → Role is fused into a
-          precision-crafted AI prompt in the next step.
+        <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Context Configurator</h1>
+        <p className="text-slate-400 mt-2 text-sm max-w-sm mx-auto leading-relaxed">
+          Define the training context — industry, department, role and seniority are all fused into the AI prompt.
         </p>
       </div>
 
       {/* Global error banner */}
       {allTouched && errorCount > 0 && (
-        <Alert variant="danger"
-          title={`${errorCount} field${errorCount > 1 ? 's' : ''} need attention`}
-          className="mb-6">
-          Please fix the highlighted fields below before continuing.
+        <Alert variant="danger" title={`${errorCount} field${errorCount > 1 ? 's' : ''} need attention`} className="mb-6">
+          Fix the highlighted fields below to continue.
         </Alert>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-4">
 
-        {/* ── INDUSTRY ──────────────────────────────────────────────────────── */}
-        <Card className={cn(touched.industry && errors.industry
-          ? 'border-red-300 ring-1 ring-red-300' : '')}>
+        {/* ── INDUSTRY ── */}
+        <Card className={cn(touched.industry && errors.industry ? 'border-red-500/40' : '')}>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-blue-500" />
-              <CardTitle>Industry Sector <RequiredStar /></CardTitle>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center flex-shrink-0">
+                <Building2 className="h-3.5 w-3.5 text-blue-400" />
+              </div>
+              <div>
+                <CardTitle>Industry Sector <Star /></CardTitle>
+                <CardDescription>Primary industry for this training matrix.</CardDescription>
+              </div>
             </div>
-            <CardDescription>Select the primary industry for this training matrix.</CardDescription>
           </CardHeader>
           <CardContent>
             <Select
@@ -143,34 +115,24 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
               placeholder="Select an industry..."
               error={touched.industry ? errors.industry : undefined}
             />
-
-            {/* Industry focus + risk badges */}
             {selectedIndustry && (
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
-                    <Target className="h-4 w-4 text-emerald-600" />
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Core Focus Areas
-                    </span>
+                    <Target className="h-3.5 w-3.5 text-emerald-400" />
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Focus Areas</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {selectedIndustry.focuses.map((f, i) => (
-                      <Badge key={i} variant="success">{f}</Badge>
-                    ))}
+                    {selectedIndustry.focuses.map((f, i) => <Badge key={i} variant="success">{f}</Badge>)}
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Key Risk Factors
-                    </span>
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Key Risks</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {selectedIndustry.risks.map((r, i) => (
-                      <Badge key={i} variant="warning">{r}</Badge>
-                    ))}
+                    {selectedIndustry.risks.map((r, i) => <Badge key={i} variant="warning">{r}</Badge>)}
                   </div>
                 </div>
               </div>
@@ -178,123 +140,83 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
           </CardContent>
         </Card>
 
-        {/* ── DEPARTMENT ────────────────────────────────────────────────────── */}
-        <Card className={cn(
-          !config.industry ? 'opacity-50 pointer-events-none' : '',
-          touched.department && errors.department ? 'border-red-300 ring-1 ring-red-300' : ''
-        )}>
+        {/* ── DEPARTMENT ── */}
+        <Card className={cn(!config.industry ? 'opacity-40 pointer-events-none' : '')}>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <LayoutGrid className="h-5 w-5 text-violet-500" />
-              <CardTitle>Department
-                <span className="text-gray-400 font-normal text-sm ml-2">(Optional)</span>
-              </CardTitle>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-violet-500/15 border border-violet-500/25 flex items-center justify-center flex-shrink-0">
+                <LayoutGrid className="h-3.5 w-3.5 text-violet-400" />
+              </div>
+              <div>
+                <CardTitle>Department <span className="text-slate-600 font-normal text-xs ml-1">(Optional)</span></CardTitle>
+                <CardDescription>Narrow scope to a specific department within {config.industry || 'the industry'}.</CardDescription>
+              </div>
             </div>
-            <CardDescription>
-              Narrow the training to a specific department within{' '}
-              <strong>{config.industry || 'the selected industry'}</strong>.
-              This adds department-specific sub-focuses to the AI prompt.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             {industryDepts.length === 0 ? (
-              <p className="text-sm text-gray-400 italic">
-                Select an industry above to see available departments.
-              </p>
+              <p className="text-sm text-slate-600 italic">Select an industry to see departments.</p>
             ) : (
               <>
-                {/* Department grid cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {industryDepts.map(dept => {
-                    const isSelected = config.department === dept.id;
+                    const isSel = config.department === dept.id;
                     return (
                       <button
                         key={dept.id}
-                        onClick={() => handleDeptChange(isSelected ? '' : dept.id)}
+                        onClick={() => { onConfigChange({ ...config, department: isSel ? '' : dept.id }); touch('department'); }}
+                        aria-pressed={isSel}
                         className={cn(
-                          'flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all duration-150',
-                          'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-violet-400',
-                          isSelected
-                            ? 'border-violet-500 bg-violet-50 shadow-sm'
-                            : 'border-gray-200 bg-white hover:border-violet-300 hover:bg-violet-50/30',
+                          'flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all duration-200',
+                          'focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60',
+                          isSel
+                            ? 'border-violet-500/50 bg-violet-500/10'
+                            : 'border-white/8 bg-white/2 hover:border-white/16 hover:bg-white/5',
                         )}
-                        aria-pressed={isSelected}
                       >
-                        <span className="text-xl flex-shrink-0 mt-0.5">{dept.emoji}</span>
+                        <span className="text-lg flex-shrink-0 mt-0.5 leading-none">{dept.emoji}</span>
                         <div className="flex-1 min-w-0">
-                          <p className={cn(
-                            'font-semibold text-sm leading-tight',
-                            isSelected ? 'text-violet-800' : 'text-gray-800',
-                          )}>
-                            {dept.name}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                            {dept.typicalRoles.slice(0, 3).join(' · ')}
-                          </p>
+                          <p className={cn('font-medium text-sm', isSel ? 'text-violet-300' : 'text-slate-300')}>{dept.name}</p>
+                          <p className="text-xs text-slate-600 mt-0.5 truncate">{dept.typicalRoles.slice(0, 3).join(' · ')}</p>
                         </div>
-                        <div className={cn(
-                          'w-4 h-4 rounded-full border-2 flex-shrink-0 mt-1 transition-all',
-                          isSelected ? 'border-violet-500 bg-violet-500' : 'border-gray-300',
-                        )} />
+                        <div className={cn('w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 mt-1 transition-all', isSel ? 'border-violet-400 bg-violet-400' : 'border-slate-600')} />
                       </button>
                     );
                   })}
                 </div>
 
-                {/* Selected department detail */}
                 {selectedDept && (
-                  <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4 space-y-3">
+                  <div className="mt-4 p-4 rounded-xl border border-violet-500/25 bg-violet-500/8 space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">{selectedDept.emoji}</span>
-                      <span className="font-semibold text-violet-900">{selectedDept.name}</span>
-                      <Badge variant="info" className="ml-auto">Selected</Badge>
+                      <span className="text-base">{selectedDept.emoji}</span>
+                      <span className="font-semibold text-sm text-violet-300">{selectedDept.name}</span>
+                      <Badge variant="violet" className="ml-auto">Selected</Badge>
                     </div>
-
-                    {/* Sub-focuses */}
                     <div>
                       <div className="flex items-center gap-1.5 mb-1.5">
-                        <Sparkles className="h-3.5 w-3.5 text-violet-600" />
-                        <span className="text-xs font-semibold text-violet-700 uppercase tracking-wide">
-                          Department Sub-Focuses (injected into prompt)
-                        </span>
+                        <Sparkles className="h-3 w-3 text-violet-400" />
+                        <span className="text-xs font-semibold text-violet-500 uppercase tracking-wider">Sub-Focuses → Injected into prompt</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {selectedDept.subFocuses.map((sf, i) => (
-                          <Badge key={i} variant="info">{sf}</Badge>
-                        ))}
+                        {selectedDept.subFocuses.map((sf, i) => <Badge key={i} variant="violet">{sf}</Badge>)}
                       </div>
                     </div>
-
-                    {/* Typical roles */}
                     <div>
                       <div className="flex items-center gap-1.5 mb-1.5">
-                        <Briefcase className="h-3.5 w-3.5 text-violet-600" />
-                        <span className="text-xs font-semibold text-violet-700 uppercase tracking-wide">
-                          Typical Roles
-                        </span>
+                        <Briefcase className="h-3 w-3 text-slate-500" />
+                        <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Typical Roles</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {selectedDept.typicalRoles.map((r, i) => (
-                          <Badge key={i} variant="outline">{r}</Badge>
-                        ))}
+                        {selectedDept.typicalRoles.map((r, i) => <Badge key={i} variant="outline">{r}</Badge>)}
                       </div>
                     </div>
-
-                    <p className="text-xs text-violet-700 flex items-center gap-1.5 pt-1">
-                      <Info className="h-3.5 w-3.5 flex-shrink-0" />
-                      Department sub-focuses will be added as a priority layer in the AI prompt,
-                      focusing all 60 stages on this department's real workflows.
-                    </p>
                   </div>
                 )}
 
-                {/* Clear selection button */}
                 {config.department && (
-                  <button
-                    onClick={() => onConfigChange({ ...config, department: '' })}
-                    className="mt-2 text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
-                  >
-                    ✕ Clear department selection
+                  <button onClick={() => onConfigChange({ ...config, department: '' })}
+                    className="mt-2 text-xs text-slate-600 hover:text-red-400 transition-colors flex items-center gap-1">
+                    ✕ Clear department
                   </button>
                 )}
               </>
@@ -302,18 +224,18 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
           </CardContent>
         </Card>
 
-        {/* ── JOB TITLE ─────────────────────────────────────────────────────── */}
-        <Card className={cn(touched.jobTitle && errors.jobTitle
-          ? 'border-red-300 ring-1 ring-red-300' : '')}>
+        {/* ── JOB TITLE ── */}
+        <Card className={cn(touched.jobTitle && errors.jobTitle ? 'border-red-500/40' : '')}>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-purple-500" />
-              <CardTitle>Job Title / Role <RequiredStar /></CardTitle>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-500/25 flex items-center justify-center flex-shrink-0">
+                <Briefcase className="h-3.5 w-3.5 text-purple-400" />
+              </div>
+              <div>
+                <CardTitle>Job Title / Role <Star /></CardTitle>
+                <CardDescription>The exact role this matrix is designed for{selectedDept ? ` within ${selectedDept.name}` : ''}.</CardDescription>
+              </div>
             </div>
-            <CardDescription>
-              The exact role this matrix is designed for
-              {selectedDept ? ` within ${selectedDept.name}` : ''}.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <Input
@@ -322,136 +244,102 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
               onChange={e => { onConfigChange({ ...config, jobTitle: e.target.value }); touch('jobTitle'); }}
               onBlur={() => touch('jobTitle')}
               error={touched.jobTitle ? errors.jobTitle : undefined}
-              hint="Be specific — embedded directly into the AI prompt and exported file."
+              hint="Embedded directly into the AI prompt and the exported file."
             />
-            <div className="flex items-center justify-between mt-1.5 flex-wrap gap-2">
-              {/* Quick-fill typical role pills */}
-              {selectedDept && selectedDept.typicalRoles.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedDept.typicalRoles.map((role, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        onConfigChange({ ...config, jobTitle: role });
-                        touch('jobTitle');
-                      }}
-                      className="text-xs px-2 py-0.5 rounded-full border border-violet-200 bg-violet-50
-                        text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition-colors"
-                    >
-                      {role}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <span className={cn(
-                'text-xs ml-auto',
-                config.jobTitle.length > 100 ? 'text-amber-500' : 'text-gray-400',
-              )}>
+            {selectedDept && (
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                {selectedDept.typicalRoles.map((role, i) => (
+                  <button key={i} onClick={() => { onConfigChange({ ...config, jobTitle: role }); touch('jobTitle'); }}
+                    className="text-xs px-2 py-0.5 rounded-full border border-violet-500/25 bg-violet-500/8 text-violet-400 hover:bg-violet-500/20 transition-colors">
+                    {role}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end mt-1">
+              <span className={cn('text-xs', config.jobTitle.length > 100 ? 'text-amber-400' : 'text-slate-600')}>
                 {config.jobTitle.length}/120
               </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* ── SENIORITY ─────────────────────────────────────────────────────── */}
-        <Card className={cn(touched.seniorityId && errors.seniorityId
-          ? 'border-red-300 ring-1 ring-red-300' : '')}>
+        {/* ── SENIORITY ── */}
+        <Card className={cn(touched.seniorityId && errors.seniorityId ? 'border-red-500/40' : '')}>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-indigo-500" />
-              <CardTitle>Seniority Layer <RequiredStar /></CardTitle>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center flex-shrink-0">
+                <Target className="h-3.5 w-3.5 text-indigo-400" />
+              </div>
+              <div>
+                <CardTitle>Seniority Layer <Star /></CardTitle>
+                <CardDescription>Shapes the tone and cognitive depth of every scenario.</CardDescription>
+              </div>
             </div>
-            <CardDescription>
-              Choose the management level — shapes the tone and cognitive depth of every scenario.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {SENIORITY_LEVELS.map(level => {
-                const isSelected = config.seniorityId === level.id;
-                const emoji = level.id === 'entry' ? '🔧' : level.id === 'junior' ? '📊' : '🎯';
+                const isSel = config.seniorityId === level.id;
                 return (
-                  <button
-                    key={level.id}
-                    onClick={() => { onConfigChange({ ...config, seniorityId: level.id }); touch('seniorityId'); }}
-                    aria-pressed={isSelected}
+                  <button key={level.id} onClick={() => { onConfigChange({ ...config, seniorityId: level.id }); touch('seniorityId'); }}
+                    aria-pressed={isSel}
                     className={cn(
-                      'flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-all duration-150',
-                      'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-400',
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50 shadow-md'
-                        : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40',
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl">{emoji}</span>
-                      <div className={cn(
-                        'w-4 h-4 rounded-full border-2 transition-all flex-shrink-0',
-                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300',
-                      )} />
-                    </div>
-                    <p className={cn(
-                      'font-semibold text-sm',
-                      isSelected ? 'text-blue-700' : 'text-gray-700',
+                      'flex flex-col gap-2.5 p-4 rounded-xl border text-left transition-all duration-200',
+                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60',
+                      isSel ? 'border-amber-500/40 bg-amber-500/8' : 'border-white/8 bg-white/2 hover:border-white/16 hover:bg-white/5',
                     )}>
-                      {level.label}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xl">{SENIORITY_ICONS[level.id]}</span>
+                      <div className={cn('w-3.5 h-3.5 rounded-full border-2 transition-all', isSel ? 'border-amber-400 bg-amber-400' : 'border-slate-600')} />
+                    </div>
+                    <p className={cn('font-semibold text-sm leading-snug', isSel ? 'text-amber-300' : 'text-slate-300')}>{level.label}</p>
                   </button>
                 );
               })}
             </div>
-
             {selectedSeniority && (
-              <div className="mt-3 flex items-start gap-2 p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
-                <Info className="h-4 w-4 text-indigo-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-indigo-700">
-                  <strong>Tonal Frame:</strong> {selectedSeniority.tone}
-                </p>
+              <div className="mt-3 flex items-start gap-2 p-3 rounded-xl border border-amber-500/20 bg-amber-500/6">
+                <Info className="h-3.5 w-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-300/80"><strong className="text-amber-300">Tonal Frame:</strong> {selectedSeniority.tone}</p>
               </div>
             )}
-
             {touched.seniorityId && errors.seniorityId && (
-              <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
-                ⚠ {errors.seniorityId}
-              </p>
+              <p className="text-xs text-red-400 mt-2">⚠ {errors.seniorityId}</p>
             )}
           </CardContent>
         </Card>
 
-        {/* ── POLICY PATCH ──────────────────────────────────────────────────── */}
+        {/* ── POLICY PATCH ── */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-teal-500" />
-              <CardTitle>
-                Policy Patch
-                <span className="text-gray-400 font-normal text-sm ml-2">(Optional)</span>
-              </CardTitle>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-teal-500/15 border border-teal-500/25 flex items-center justify-center flex-shrink-0">
+                <FileText className="h-3.5 w-3.5 text-teal-400" />
+              </div>
+              <div>
+                <CardTitle>Policy Patch <span className="text-slate-600 font-normal text-xs ml-1">(Optional)</span></CardTitle>
+                <CardDescription>Company policy injected as a priority context layer into the AI prompt.</CardDescription>
+              </div>
             </div>
-            <CardDescription>
-              Paste raw company policy text. Injected as a priority context layer in the AI prompt,
-              ensuring all scenarios align with your organisation's actual policies.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <Textarea
-              placeholder={`Example:\n"All employees must complete mandatory HSE induction within 30 days of joining. Incident reporting must occur within 4 hours via the SafetyFirst portal..."`}
+              placeholder={`"All employees must complete mandatory HSE induction within 30 days..."`}
               value={config.policyText}
               onChange={e => onConfigChange({ ...config, policyText: e.target.value })}
-              rows={6}
+              rows={5}
               className="font-mono text-xs"
             />
             {config.policyText.trim() && (
-              <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
-                ✓ {config.policyText.trim().split(/\s+/).length} words will be injected into the prompt.
-              </p>
+              <p className="text-xs text-emerald-400 mt-2">✓ {config.policyText.trim().split(/\s+/).length} words will be injected.</p>
             )}
           </CardContent>
         </Card>
 
-        {/* ── NAVIGATION ────────────────────────────────────────────────────── */}
-        <div className="flex justify-end pb-8">
-          <Button size="lg" onClick={handleNext} className="min-w-48">
+        {/* ── NAVIGATION ── */}
+        <div className="flex justify-end pb-10">
+          <Button variant="gold" size="lg" onClick={handleNext} className="min-w-52">
             Next: Generate Prompt
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -462,6 +350,4 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
   );
 };
 
-const RequiredStar = () => (
-  <span className="text-red-500 ml-0.5" aria-label="required">*</span>
-);
+const Star = () => <span className="text-amber-500 ml-0.5 text-xs" aria-label="required">*</span>;

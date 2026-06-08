@@ -11,24 +11,24 @@ interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const variantConfig: Record<AlertVariant, { bg: string; border: string; icon: React.ReactNode }> = {
   success: {
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-300',
-    icon: <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />,
+    bg: 'bg-emerald-500/10',
+    border: 'border-emerald-500/30',
+    icon: <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />,
   },
   warning: {
-    bg: 'bg-amber-50',
-    border: 'border-amber-300',
-    icon: <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />,
+    bg: 'bg-amber-500/10',
+    border: 'border-amber-500/30',
+    icon: <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />,
   },
   danger: {
-    bg: 'bg-red-50',
-    border: 'border-red-300',
-    icon: <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />,
+    bg: 'bg-red-500/10',
+    border: 'border-red-500/30',
+    icon: <XCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />,
   },
   info: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-300',
-    icon: <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />,
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/30',
+    icon: <Info className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />,
   },
 };
 
@@ -42,8 +42,8 @@ export const Alert: React.FC<AlertProps> = ({ className, variant = 'info', title
     >
       {cfg.icon}
       <div className="flex-1 min-w-0">
-        {title && <p className="font-semibold text-sm mb-1">{title}</p>}
-        <div className="text-sm">{children}</div>
+        {title && <p className="font-semibold text-sm text-slate-100 mb-1">{title}</p>}
+        <div className="text-sm text-slate-300">{children}</div>
       </div>
     </div>
   );

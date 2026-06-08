@@ -13,7 +13,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={textareaId} className="text-sm font-medium text-gray-700">
+          <label htmlFor={textareaId} className="text-sm font-medium text-slate-300">
             {label}
           </label>
         )}
@@ -21,17 +21,18 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           id={textareaId}
           className={cn(
-            'w-full px-3 py-2.5 text-sm rounded-xl border transition-colors resize-y',
-            'border-gray-300 bg-white text-gray-900 placeholder-gray-400',
-            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-            'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50',
-            error && 'border-red-400 focus:ring-red-400',
+            'w-full px-3.5 py-2.5 text-sm rounded-xl border transition-all duration-150 resize-y',
+            'bg-gray-800/60 text-slate-100 placeholder-slate-500',
+            'border-white/10 hover:border-white/20',
+            'focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 focus:bg-gray-800/80',
+            'disabled:opacity-40 disabled:cursor-not-allowed',
+            error && 'border-red-500/60 focus:ring-red-500/20',
             className
           )}
           {...props}
         />
-        {hint && !error && <p className="text-xs text-gray-500">{hint}</p>}
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {hint && !error && <p className="text-xs text-slate-500">{hint}</p>}
+        {error && <p className="text-xs text-red-400">⚠ {error}</p>}
       </div>
     );
   }
