@@ -8,6 +8,7 @@ import { Step5Export }      from './components/steps/Step5Export';
 import { DraftManager }     from './components/DraftManager';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { ToastContainer, useToast } from './components/ui/Toast';
+import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { storage }          from './lib/localStorage';
 import { drafts }           from './lib/drafts';
 import { analytics }        from './lib/analytics';
@@ -227,6 +228,7 @@ export default function App() {
 
       {/* ─── Toast Container ───────────────────────────────── */}
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
+      <DiagnosticsPanel />
     </div>
   );
 }
