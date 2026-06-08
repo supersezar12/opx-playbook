@@ -786,4 +786,89 @@ export const DEPARTMENTS_DATA: IndustryDepartments[] = [
       },
     ],
   },
+
+  // ── 21. Distribution Company ──────────────────────────────────────────────
+  {
+    industry: 'Distribution Company',
+    departments: [
+      {
+        id: 'dist_sales',
+        name: 'Sales & Territory Management',
+        emoji: '🤝',
+        subFocuses: [
+          'Territory Planning & Route Coverage',
+          'Customer Order Taking & Upselling',
+          'Sales Target Setting & Daily Tracking',
+          'Outlet Classification & Call Frequency',
+          'Promotional Sell-In & Activation',
+        ],
+        typicalRoles: ['Sales Representative', 'Area Sales Manager', 'Key Account Executive', 'Van Salesman', 'Regional Sales Manager'],
+      },
+      {
+        id: 'dist_warehouse',
+        name: 'Warehouse & Inventory',
+        emoji: '🏪',
+        subFocuses: [
+          'Goods Receiving & Inspection (GRN)',
+          'Bin Location & Stock Slotting',
+          'Pick, Pack & Dispatch Operations',
+          'FIFO / FEFO Rotation & Expiry Management',
+          'Cycle Counting & Stock Reconciliation',
+        ],
+        typicalRoles: ['Warehouse Supervisor', 'Store Keeper', 'Inventory Controller', 'Picker & Packer', 'Warehouse Manager'],
+      },
+      {
+        id: 'dist_delivery',
+        name: 'Fleet & Delivery Operations',
+        emoji: '🚚',
+        subFocuses: [
+          'Delivery Route Planning & Optimisation',
+          'Driver Manifest & POD Management',
+          'Vehicle Inspection & Maintenance Scheduling',
+          'Failed Delivery & Returns Handling',
+          'Cold Chain Compliance (where applicable)',
+        ],
+        typicalRoles: ['Driver', 'Delivery Supervisor', 'Fleet Coordinator', 'Logistics Manager', 'Transport Manager'],
+      },
+      {
+        id: 'dist_commercial',
+        name: 'Commercial & Principal Relations',
+        emoji: '📋',
+        subFocuses: [
+          'Principal / Brand Owner Relationship Management',
+          'Distribution Agreement & Target Negotiation',
+          'Trade Terms & Pricing Management',
+          'Market Share & Sellout Reporting to Principals',
+          'New Principal & Category Onboarding',
+        ],
+        typicalRoles: ['Commercial Manager', 'Business Development Manager', 'Principal Relations Executive', 'Category Manager', 'Trade Marketing Manager'],
+      },
+      {
+        id: 'dist_credit',
+        name: 'Credit Control & Finance',
+        emoji: '💰',
+        subFocuses: [
+          'Customer Credit Limit Setting & Review',
+          'Accounts Receivable & Aging Follow-Up',
+          'Collection Calls & Field Collections',
+          'Bad Debt Provisioning & Write-Off Process',
+          'Cash & Cheque Handling Compliance',
+        ],
+        typicalRoles: ['Credit Controller', 'Collections Officer', 'Finance Manager', 'Accounts Receivable Clerk', 'CFO'],
+      },
+      {
+        id: 'dist_procurement',
+        name: 'Procurement & Supplier Management',
+        emoji: '🔗',
+        subFocuses: [
+          'Purchase Order Management & Lead Time Tracking',
+          'Supplier Performance & On-Time Delivery',
+          'Demand Forecasting & Replenishment Planning',
+          'Import Customs & Clearance Coordination',
+          'Cost Negotiation & Landed Cost Analysis',
+        ],
+        typicalRoles: ['Purchasing Officer', 'Procurement Manager', 'Supply Planner', 'Demand Planner', 'Procurement Director'],
+      },
+    ],
+  },
 ];

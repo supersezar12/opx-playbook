@@ -341,4 +341,21 @@ export const INDUSTRIES_DATA: IndustryData[] = [
       'Skilled Pilot & Tech Shortage',
     ],
   },
+  {
+    industry: 'Distribution Company',
+    focuses: [
+      'Sales & Territory Management',
+      'Warehouse & Inventory Operations',
+      'Fleet & Last-Mile Delivery',
+      'Principal & Supplier Relations',
+      'Credit Control & Collections',
+    ],
+    risks: [
+      'Distributor Margin Compression',
+      'Principal Contract Loss or Renegotiation',
+      'Receivables Default & Bad Debt',
+      'Fuel & Transport Cost Spikes',
+      'Counterfeit & Diversion Risk',
+    ],
+  },
 ];
