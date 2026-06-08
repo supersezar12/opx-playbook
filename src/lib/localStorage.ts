@@ -7,6 +7,18 @@ const KEYS = {
   exportOptions: 'opx_export_options',
 } as const;
 
+/** Ensure any saved config has all current fields (forward-compatibility). */
+function normaliseConfig(raw: Partial<AppConfig>): AppConfig {
+  return {
+    industry:          raw.industry          ?? '',
+    department:        raw.department        ?? '',
+    productCategories: raw.productCategories ?? [],   // added v1.4
+    jobTitle:          raw.jobTitle          ?? '',
+    seniorityId:       raw.seniorityId       ?? '',
+    policyText:        raw.policyText        ?? '',
+  };
+}
+
 export const storage = {
   saveConfig(config: AppConfig) {
     try { localStorage.setItem(KEYS.config, JSON.stringify(config)); } catch {}
@@ -14,7 +26,8 @@ export const storage = {
   loadConfig(): AppConfig | null {
     try {
       const raw = localStorage.getItem(KEYS.config);
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      return normaliseConfig(JSON.parse(raw) as Partial<AppConfig>);
     } catch { return null; }
   },
   savePayload(payload: TrainingPayload) {

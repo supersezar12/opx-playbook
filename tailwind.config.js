@@ -56,8 +56,14 @@ export default {
     // ── Focus visible variants ───────────────────────────────────────────────
     'focus-visible:ring-amber-400/60',
     'focus:ring-2',
-    // ── Gradient stops ───────────────────────────────────────────────────────
-    'from-amber-500/20','from-amber-500/15',
+    // ── Orange / product category variants ──────────────────────────────────
+    'bg-orange-500/6','bg-orange-500/8','bg-orange-500/10','bg-orange-500/15','bg-orange-500/20',
+    'border-orange-500/20','border-orange-500/25','border-orange-500/30','border-orange-500/40','border-orange-500/50',
+    'text-orange-300','text-orange-400','text-orange-500',
+    'focus-visible:ring-orange-400/60',
+    'hover:bg-orange-500/20',
+    // ── Gradient stop variants for orange ───────────────────────────────────
+    'from-orange-500/15','from-orange-500/20',
     'from-teal-500/20','from-purple-500/20',
     'from-emerald-500/15','from-blue-500/15',
     'from-violet-500/15','from-indigo-500/15',

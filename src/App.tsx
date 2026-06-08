@@ -41,7 +41,7 @@ export default function App() {
     const savedStep     = storage.loadStep();
     const savedExport   = storage.loadExportOptions();
 
-    if (savedConfig)  setConfig(savedConfig);
+    if (savedConfig)  setConfig({ ...DEFAULT_CONFIG, ...savedConfig, productCategories: savedConfig.productCategories ?? [] });
     if (savedPayload) setPayload(savedPayload);
     if (savedExport)  setExportOptions(savedExport);
     if (savedStep >= 1 && savedStep <= 5) setCurrentStep(savedStep as WizardStep);
@@ -96,7 +96,7 @@ export default function App() {
 
   // ─── Draft load handler ───────────────────────────────────────────────────
   const handleLoadDraft = (draft: DraftSnapshot) => {
-    setConfig(draft.config);
+    setConfig({ ...DEFAULT_CONFIG, ...draft.config, productCategories: draft.config.productCategories ?? [] });
     if (draft.payload) setPayload(draft.payload);
     setExportOptions(draft.exportOptions);
     goToStep(draft.step as WizardStep);

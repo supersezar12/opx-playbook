@@ -323,25 +323,28 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
 
         {/* ── PRODUCT CATEGORIES (Distribution Company only) ── */}
         {isDistribution && (
-          <Card>
-            <CardHeader>
+          <div style={{ borderRadius: '1rem', border: '1px solid rgba(249,115,22,0.35)', background: 'rgba(17,24,39,0.85)', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(249,115,22,0.2)' }}>
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-orange-500/15 border border-orange-500/25 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm">🛒</span>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 14 }}>🛒</span>
                 </div>
                 <div>
-                  <CardTitle>
+                  <h2 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9', margin: 0 }}>
                     Product Categories
-                    <span className="text-slate-600 font-normal text-xs ml-2">(Optional — select all that apply)</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Select the product portfolio handled. Each category's temperature, shelf life and handling requirements are injected into the AI prompt.
-                  </CardDescription>
+                    <span style={{ color: '#64748b', fontWeight: 400, fontSize: '0.75rem', marginLeft: 8 }}>(Optional — select all that apply)</span>
+                  </h2>
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.15rem 0 0' }}>
+                    Select every category your company distributes. Temperature, shelf life &amp; handling rules are injected into the AI prompt for each selected category.
+                  </p>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            </div>
+
+            {/* Category grid */}
+            <div style={{ padding: '1.25rem 1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem' }}>
                 {PRODUCT_CATEGORIES_DATA.map(cat => {
                   const isSel = (config.productCategories ?? []).includes(cat.id);
                   return (
@@ -349,76 +352,95 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
                       key={cat.id}
                       onClick={() => toggleCategory(cat.id)}
                       aria-pressed={isSel}
-                      className={cn(
-                        'flex items-start gap-2 p-3 rounded-xl border text-left transition-all duration-150',
-                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60',
-                        isSel
-                          ? 'border-orange-500/50 bg-orange-500/10'
-                          : 'border-white/8 bg-white/2 hover:border-white/16 hover:bg-white/5',
-                      )}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '0.5rem',
+                        padding: '0.65rem 0.75rem',
+                        borderRadius: '0.75rem',
+                        border: isSel ? '1.5px solid rgba(249,115,22,0.6)' : '1px solid rgba(255,255,255,0.1)',
+                        background: isSel ? 'rgba(249,115,22,0.12)' : 'rgba(255,255,255,0.03)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s',
+                        width: '100%',
+                      }}
                     >
-                      <span className="text-lg flex-shrink-0 leading-none mt-0.5">{cat.emoji}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn('font-medium text-sm leading-tight', isSel ? 'text-orange-300' : 'text-slate-300')}>
+                      <span style={{ fontSize: '1.2rem', flexShrink: 0, lineHeight: 1, marginTop: 1 }}>{cat.emoji}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.8rem', fontWeight: 600, color: isSel ? '#fdba74' : '#cbd5e1', margin: 0, lineHeight: 1.3 }}>
                           {cat.name}
                         </p>
-                        <p className="text-xs text-slate-600 mt-0.5 leading-snug">{cat.tempRange}</p>
+                        <p style={{ fontSize: '0.68rem', color: '#64748b', margin: '0.15rem 0 0', lineHeight: 1.3 }}>
+                          {cat.tempRange}
+                        </p>
                       </div>
-                      <div className={cn(
-                        'w-3.5 h-3.5 rounded border-2 flex-shrink-0 mt-0.5 transition-all',
-                        isSel ? 'border-orange-400 bg-orange-400' : 'border-slate-600',
-                      )} />
+                      <div style={{
+                        width: 14, height: 14, borderRadius: 3, border: isSel ? '2px solid #f97316' : '2px solid #475569',
+                        background: isSel ? '#f97316' : 'transparent', flexShrink: 0, marginTop: 2, transition: 'all 0.15s',
+                      }} />
                     </button>
                   );
                 })}
               </div>
 
-              {/* Selected category detail cards */}
-              {(config.productCategories ?? []).length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Selected Category Details — injected into AI prompt:
-                  </p>
-                  {PRODUCT_CATEGORIES_DATA
-                    .filter(cat => (config.productCategories ?? []).includes(cat.id))
-                    .map(cat => (
-                      <div key={cat.id} className="rounded-xl border border-orange-500/20 bg-orange-500/6 p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-base">{cat.emoji}</span>
-                          <span className="font-semibold text-sm text-orange-300">{cat.name}</span>
-                          <span className="text-xs text-orange-500 ml-auto">{cat.tempRange}</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <span className="text-slate-500 font-medium">Shelf Life: </span>
-                            <span className="text-slate-400">{cat.shelfLife}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-500 font-medium">Key Risks: </span>
-                            <span className="text-slate-400">{cat.keyRisks.join(' · ')}</span>
-                          </div>
-                        </div>
-                        <div className="mt-1.5 text-xs">
-                          <span className="text-slate-500 font-medium">Examples: </span>
-                          <span className="text-slate-500">{cat.examples.join(', ')}</span>
-                        </div>
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                          {cat.examples.slice(0, 5).map((ex, i) => (
-                            <span key={i} className="text-xs px-1.5 py-0.5 bg-orange-500/15 text-orange-400 border border-orange-500/20 rounded-full">{ex}</span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+              {/* Quick-select helpers */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem', alignItems: 'center' }}>
+                <button
+                  onClick={() => onConfigChange({ ...config, productCategories: PRODUCT_CATEGORIES_DATA.map(c => c.id) })}
+                  style={{ fontSize: '0.72rem', color: '#f97316', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.25)', borderRadius: 999, padding: '0.2rem 0.6rem', cursor: 'pointer' }}
+                >
+                  Select All
+                </button>
+                {(config.productCategories ?? []).length > 0 && (
                   <button
                     onClick={() => onConfigChange({ ...config, productCategories: [] })}
-                    className="text-xs text-slate-600 hover:text-red-400 transition-colors flex items-center gap-1 mt-1"
+                    style={{ fontSize: '0.72rem', color: '#94a3b8', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '0.2rem 0.6rem', cursor: 'pointer' }}
                   >
-                    ✕ Clear all categories
+                    ✕ Clear ({(config.productCategories ?? []).length})
                   </button>
+                )}
+                <span style={{ fontSize: '0.72rem', color: '#475569', marginLeft: 'auto' }}>
+                  {(config.productCategories ?? []).length} of {PRODUCT_CATEGORIES_DATA.length} selected
+                </span>
+              </div>
+
+              {/* Selected category detail cards */}
+              {(config.productCategories ?? []).length > 0 && (
+                <div style={{ marginTop: '1rem' }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                    Selected — details injected into AI prompt:
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {PRODUCT_CATEGORIES_DATA
+                      .filter(cat => (config.productCategories ?? []).includes(cat.id))
+                      .map(cat => (
+                        <div key={cat.id} style={{ borderRadius: '0.75rem', border: '1px solid rgba(249,115,22,0.25)', background: 'rgba(249,115,22,0.06)', padding: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '1rem' }}>{cat.emoji}</span>
+                            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#fdba74' }}>{cat.name}</span>
+                            <span style={{ fontSize: '0.7rem', color: '#f97316', marginLeft: 'auto', whiteSpace: 'nowrap' }}>📍 {cat.tempRange}</span>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 1rem', fontSize: '0.75rem' }}>
+                            <div><span style={{ color: '#64748b', fontWeight: 600 }}>Shelf Life: </span><span style={{ color: '#94a3b8' }}>{cat.shelfLife}</span></div>
+                            <div><span style={{ color: '#64748b', fontWeight: 600 }}>Handling: </span><span style={{ color: '#94a3b8' }}>{cat.handling.slice(0, 60)}…</span></div>
+                          </div>
+                          <div style={{ marginTop: '0.35rem', fontSize: '0.72rem' }}>
+                            <span style={{ color: '#ef4444', fontWeight: 600 }}>⚠ Risks: </span>
+                            <span style={{ color: '#94a3b8' }}>{cat.keyRisks.join(' · ')}</span>
+                          </div>
+                          <div style={{ marginTop: '0.4rem', display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                            {cat.examples.map((ex, i) => (
+                              <span key={i} style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem', background: 'rgba(249,115,22,0.12)', color: '#fdba74', border: '1px solid rgba(249,115,22,0.25)', borderRadius: 999 }}>{ex}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* ── POLICY PATCH ── */}
