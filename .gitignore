@@ -1,3 +1,17 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Stale compiled config files
+vite.config.d.ts
+vite.config.js
+
 # Logs
 logs
 *.log
@@ -7,9 +21,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Local env files
 *.local
 
 # Editor directories and files
