@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
-import { Settings2, Briefcase, AlertTriangle, Target, ChevronRight, Building2, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Settings2, Briefcase, AlertTriangle, Target,
+  ChevronRight, Building2, FileText, Info,
+} from 'lucide-react';
 import { INDUSTRIES_DATA } from '../../data/industries';
 import { SENIORITY_LEVELS } from '../../data/seniority';
-import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
+import { Button }      from '../ui/Button';
+import { Badge }       from '../ui/Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
-import { Select } from '../ui/Select';
-import { Input } from '../ui/Input';
-import { Textarea } from '../ui/Textarea';
-import { cn } from '../../lib/utils';
-import type { AppConfig } from '../../types';
+import { Select }      from '../ui/Select';
+import { Input }       from '../ui/Input';
+import { Textarea }    from '../ui/Textarea';
+import { Alert }       from '../ui/Alert';
+import { cn }          from '../../lib/utils';
+import { analytics }   from '../../lib/analytics';
+import type { AppConfig, Step1Errors } from '../../types';
 
 interface Step1Props {
   config: AppConfig;
@@ -17,23 +22,54 @@ interface Step1Props {
   onNext: () => void;
 }
 
+function validate(config: AppConfig): Step1Errors {
+  const errs: Step1Errors = {};
+  if (!config.industry.trim())    errs.industry    = 'Please select an industry sector.';
+  if (!config.jobTitle.trim())    errs.jobTitle    = 'Job title is required.';
+  else if (config.jobTitle.trim().length < 3) errs.jobTitle = 'Job title must be at least 3 characters.';
+  else if (config.jobTitle.trim().length > 120) errs.jobTitle = 'Job title must be 120 characters or fewer.';
+  if (!config.seniorityId)        errs.seniorityId = 'Please select a seniority level.';
+  return errs;
+}
+
 export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, onNext }) => {
-  const [touched, setTouched] = useState(false);
+  const [touched, setTouched] = useState({
+    industry: false, jobTitle: false, seniorityId: false,
+  });
+  const [errors, setErrors] = useState<Step1Errors>({});
 
   const selectedIndustry = INDUSTRIES_DATA.find(i => i.industry === config.industry);
   const selectedSeniority = SENIORITY_LEVELS.find(s => s.id === config.seniorityId);
 
-  const isValid =
-    config.industry.trim() !== '' &&
-    config.jobTitle.trim() !== '' &&
-    config.seniorityId !== '';
+  // Re-validate live once any field has been touched
+  useEffect(() => {
+    if (Object.values(touched).some(Boolean)) {
+      setErrors(validate(config));
+    }
+  }, [config, touched]);
 
   const industryOptions = INDUSTRIES_DATA.map(i => ({ value: i.industry, label: i.industry }));
 
+  const touch = (field: keyof typeof touched) =>
+    setTouched(t => ({ ...t, [field]: true }));
+
   const handleNext = () => {
-    setTouched(true);
-    if (isValid) onNext();
+    // Touch all fields to reveal all errors at once
+    setTouched({ industry: true, jobTitle: true, seniorityId: true });
+    const errs = validate(config);
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    analytics.track('step_1_completed', {
+      industry: config.industry,
+      seniority: config.seniorityId,
+      hasPolicy: config.policyText.trim().length > 0,
+    });
+    onNext();
   };
+
+  const errorCount = Object.keys(errors).length;
+  const allTouched = Object.values(touched).every(Boolean);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 step-transition">
@@ -48,14 +84,21 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
         </p>
       </div>
 
+      {/* Global validation banner (shown after first "Next" attempt) */}
+      {allTouched && errorCount > 0 && (
+        <Alert variant="danger" title={`${errorCount} field${errorCount > 1 ? 's' : ''} need attention`} className="mb-6">
+          Please fix the highlighted fields below before continuing.
+        </Alert>
+      )}
+
       <div className="space-y-6">
 
-        {/* Industry Select */}
-        <Card>
+        {/* ─── Industry Select ──────────────────────────── */}
+        <Card className={cn(touched.industry && errors.industry ? 'border-red-300 ring-1 ring-red-300' : '')}>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-blue-500" />
-              <CardTitle>Industry Sector</CardTitle>
+              <CardTitle>Industry Sector <RequiredStar /></CardTitle>
             </div>
             <CardDescription>Select the primary industry for this training matrix.</CardDescription>
           </CardHeader>
@@ -63,12 +106,10 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
             <Select
               options={industryOptions}
               value={config.industry}
-              onChange={v => onConfigChange({ ...config, industry: v })}
+              onChange={v => { onConfigChange({ ...config, industry: v }); touch('industry'); }}
               placeholder="Select an industry..."
-              error={touched && !config.industry ? 'Please select an industry.' : undefined}
+              error={touched.industry ? errors.industry : undefined}
             />
-
-            {/* Focus + Risk badges */}
             {selectedIndustry && (
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -98,12 +139,12 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
           </CardContent>
         </Card>
 
-        {/* Job Title */}
-        <Card>
+        {/* ─── Job Title ────────────────────────────────── */}
+        <Card className={cn(touched.jobTitle && errors.jobTitle ? 'border-red-300 ring-1 ring-red-300' : '')}>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Briefcase className="h-5 w-5 text-purple-500" />
-              <CardTitle>Job Title / Role</CardTitle>
+              <CardTitle>Job Title / Role <RequiredStar /></CardTitle>
             </div>
             <CardDescription>Specify the exact role this training matrix is designed for.</CardDescription>
           </CardHeader>
@@ -111,80 +152,96 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
             <Input
               placeholder="e.g., Drilling Floor Supervisor"
               value={config.jobTitle}
-              onChange={e => onConfigChange({ ...config, jobTitle: e.target.value })}
-              error={touched && !config.jobTitle.trim() ? 'Please enter a job title.' : undefined}
-              hint="Be specific — this will be embedded directly into the AI prompt and the exported file."
+              onChange={e => { onConfigChange({ ...config, jobTitle: e.target.value }); touch('jobTitle'); }}
+              onBlur={() => touch('jobTitle')}
+              error={touched.jobTitle ? errors.jobTitle : undefined}
+              hint="Be specific — this is embedded directly into the AI prompt and the exported file."
             />
+            <div className="flex justify-end mt-1">
+              <span className={cn('text-xs', config.jobTitle.length > 100 ? 'text-amber-500' : 'text-gray-400')}>
+                {config.jobTitle.length}/120
+              </span>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Seniority Layer */}
-        <Card>
+        {/* ─── Seniority Layer ──────────────────────────── */}
+        <Card className={cn(touched.seniorityId && errors.seniorityId ? 'border-red-300 ring-1 ring-red-300' : '')}>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Target className="h-5 w-5 text-indigo-500" />
-              <CardTitle>Seniority Layer</CardTitle>
+              <CardTitle>Seniority Layer <RequiredStar /></CardTitle>
             </div>
-            <CardDescription>Choose the management level. This shapes the tone and cognitive depth of every scenario.</CardDescription>
+            <CardDescription>
+              Choose the management level. This shapes the tone and cognitive depth of every scenario.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {SENIORITY_LEVELS.map(level => {
                 const isSelected = config.seniorityId === level.id;
+                const emoji = level.id === 'entry' ? '🔧' : level.id === 'junior' ? '📊' : '🎯';
                 return (
                   <button
                     key={level.id}
-                    onClick={() => onConfigChange({ ...config, seniorityId: level.id })}
+                    onClick={() => { onConfigChange({ ...config, seniorityId: level.id }); touch('seniorityId'); }}
                     className={cn(
-                      'flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-all duration-150',
+                      'flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-400',
                       isSelected
                         ? 'border-blue-500 bg-blue-50 shadow-md'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                        : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40',
                     )}
+                    aria-pressed={isSelected}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={cn('text-2xl', level.id === 'entry' ? '🔧' : level.id === 'junior' ? '📊' : '🎯')}>
-                        {level.id === 'entry' ? '🔧' : level.id === 'junior' ? '📊' : '🎯'}
-                      </span>
-                      <div className={cn('w-4 h-4 rounded-full border-2 transition-all', isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300')} />
+                      <span className="text-2xl">{emoji}</span>
+                      <div className={cn(
+                        'w-4 h-4 rounded-full border-2 transition-all flex-shrink-0',
+                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300',
+                      )} />
                     </div>
-                    <div>
-                      <p className={cn('font-semibold text-sm', isSelected ? 'text-blue-700' : 'text-gray-700')}>
-                        {level.label}
-                      </p>
-                    </div>
+                    <p className={cn('font-semibold text-sm', isSelected ? 'text-blue-700' : 'text-gray-700')}>
+                      {level.label}
+                    </p>
                   </button>
                 );
               })}
             </div>
+
             {selectedSeniority && (
               <div className="mt-3 flex items-start gap-2 p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
-                <span className="text-indigo-500 mt-0.5 flex-shrink-0">💡</span>
+                <Info className="h-4 w-4 text-indigo-500 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-indigo-700">
                   <strong>Tonal Frame:</strong> {selectedSeniority.tone}
                 </p>
               </div>
             )}
-            {touched && !config.seniorityId && (
-              <p className="text-xs text-red-600 mt-2">Please select a seniority level.</p>
+
+            {touched.seniorityId && errors.seniorityId && (
+              <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                <span>⚠</span> {errors.seniorityId}
+              </p>
             )}
           </CardContent>
         </Card>
 
-        {/* Policy Patching */}
+        {/* ─── Policy Patching (optional) ───────────────── */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-teal-500" />
-              <CardTitle>Policy Patch <span className="text-gray-400 font-normal text-sm ml-1">(Optional)</span></CardTitle>
+              <CardTitle>
+                Policy Patch
+                <span className="text-gray-400 font-normal text-sm ml-2">(Optional)</span>
+              </CardTitle>
             </div>
             <CardDescription>
-              Paste raw company policy text here. It will be injected into the AI prompt as a priority context layer, ensuring all scenarios align with your organisation's actual policies.
+              Paste raw company policy text. It will be injected into the AI prompt as a priority context layer so all scenarios align with your organisation's actual policies.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Textarea
-              placeholder={`Example:\n"All employees must complete mandatory HSE induction within 30 days of joining. Incident reporting must occur within 4 hours via the SafetyFirst portal. Supervisors are responsible for ensuring daily JSA completion before any field operation commences..."`}
+              placeholder={`Example:\n"All employees must complete mandatory HSE induction within 30 days of joining. Incident reporting must occur within 4 hours via the SafetyFirst portal..."`}
               value={config.policyText}
               onChange={e => onConfigChange({ ...config, policyText: e.target.value })}
               rows={6}
@@ -198,18 +255,19 @@ export const Step1Configure: React.FC<Step1Props> = ({ config, onConfigChange, o
           </CardContent>
         </Card>
 
-        {/* Navigation */}
+        {/* ─── Navigation ───────────────────────────────── */}
         <div className="flex justify-end pb-8">
-          <Button
-            size="lg"
-            onClick={handleNext}
-            className="min-w-48"
-          >
+          <Button size="lg" onClick={handleNext} className="min-w-48">
             Next: Generate Prompt
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+
       </div>
     </div>
   );
 };
+
+const RequiredStar = () => (
+  <span className="text-red-500 ml-0.5" aria-label="required">*</span>
+);

@@ -1,54 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
-import { Step1Configure } from './components/steps/Step1Configure';
-import { Step2Generate } from './components/steps/Step2Generate';
-import { Step3Ingest } from './components/steps/Step3Ingest';
-import { Step4Audit } from './components/steps/Step4Audit';
-import { Step5Export } from './components/steps/Step5Export';
-import { storage } from './lib/localStorage';
-import type { AppConfig, TrainingPayload, ExportOptions, WizardStep } from './types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Header }           from './components/Header';
+import { Step1Configure }   from './components/steps/Step1Configure';
+import { Step2Generate }    from './components/steps/Step2Generate';
+import { Step3Ingest }      from './components/steps/Step3Ingest';
+import { Step4Audit }       from './components/steps/Step4Audit';
+import { Step5Export }      from './components/steps/Step5Export';
+import { DraftManager }     from './components/DraftManager';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { ToastContainer, useToast } from './components/ui/Toast';
+import { storage }          from './lib/localStorage';
+import { drafts }           from './lib/drafts';
+import { analytics }        from './lib/analytics';
+import type { AppConfig, TrainingPayload, ExportOptions, WizardStep, DraftSnapshot } from './types';
 
 const DEFAULT_CONFIG: AppConfig = {
-  industry: '',
-  jobTitle: '',
-  seniorityId: '',
-  policyText: '',
+  industry: '', jobTitle: '', seniorityId: '', policyText: '',
 };
-
-const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
-  antiCopy: true,
-  bilingualToggle: true,
-  matrixTitle: '',
+const DEFAULT_EXPORT: ExportOptions = {
+  antiCopy: true, bilingualToggle: true, matrixTitle: '',
 };
 
 export default function App() {
-  const [currentStep, setCurrentStep] = useState<WizardStep>(1);
-  const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
-  const [payload, setPayload] = useState<TrainingPayload | null>(null);
-  const [exportOptions, setExportOptions] = useState<ExportOptions>(DEFAULT_EXPORT_OPTIONS);
-  const [hydrated, setHydrated] = useState(false);
+  const [currentStep,    setCurrentStep]    = useState<WizardStep>(1);
+  const [config,         setConfig]         = useState<AppConfig>(DEFAULT_CONFIG);
+  const [payload,        setPayload]        = useState<TrainingPayload | null>(null);
+  const [exportOptions,  setExportOptions]  = useState<ExportOptions>(DEFAULT_EXPORT);
+  const [hydrated,       setHydrated]       = useState(false);
+  const [draftCount,     setDraftCount]     = useState(0);
+  const [showDrafts,     setShowDrafts]     = useState(false);
+  const [showAnalytics,  setShowAnalytics]  = useState(false);
 
-  // Restore session from LocalStorage
+  const { toasts, toast, dismiss } = useToast();
+
+  // ─── Session hydration ────────────────────────────────────────────────────
   useEffect(() => {
-    const savedConfig = storage.loadConfig();
-    const savedPayload = storage.loadPayload();
-    const savedStep = storage.loadStep();
-    const savedExportOpts = storage.loadExportOptions();
+    const savedConfig   = storage.loadConfig();
+    const savedPayload  = storage.loadPayload();
+    const savedStep     = storage.loadStep();
+    const savedExport   = storage.loadExportOptions();
 
-    if (savedConfig) setConfig(savedConfig);
+    if (savedConfig)  setConfig(savedConfig);
     if (savedPayload) setPayload(savedPayload);
-    if (savedExportOpts) setExportOptions(savedExportOpts);
-    if (savedStep && savedStep >= 1 && savedStep <= 5) {
-      setCurrentStep(savedStep as WizardStep);
-    }
+    if (savedExport)  setExportOptions(savedExport);
+    if (savedStep >= 1 && savedStep <= 5) setCurrentStep(savedStep as WizardStep);
+
+    setDraftCount(drafts.count());
+    analytics.track('session_started');
     setHydrated(true);
   }, []);
 
-  // Persist config changes
+  // ─── Persist on change ────────────────────────────────────────────────────
   useEffect(() => {
     if (!hydrated) return;
     storage.saveConfig(config);
-    // Auto-fill matrix title when config changes
     if (config.jobTitle && config.industry) {
       setExportOptions(prev => ({
         ...prev,
@@ -57,29 +61,48 @@ export default function App() {
     }
   }, [config, hydrated]);
 
-  // Persist step changes
   useEffect(() => {
     if (!hydrated) return;
     storage.saveStep(currentStep);
   }, [currentStep, hydrated]);
 
-  // Persist export options
   useEffect(() => {
     if (!hydrated) return;
     storage.saveExportOptions(exportOptions);
   }, [exportOptions, hydrated]);
 
-  const goToStep = (step: WizardStep) => {
+  // ─── Navigation ───────────────────────────────────────────────────────────
+  const goToStep = useCallback((step: WizardStep) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setCurrentStep(step);
-  };
+  }, []);
 
   const handleStartNew = () => {
     setConfig(DEFAULT_CONFIG);
     setPayload(null);
-    setExportOptions(DEFAULT_EXPORT_OPTIONS);
+    setExportOptions(DEFAULT_EXPORT);
     goToStep(1);
   };
+
+  // ─── Draft load handler ───────────────────────────────────────────────────
+  const handleLoadDraft = (draft: DraftSnapshot) => {
+    setConfig(draft.config);
+    if (draft.payload) setPayload(draft.payload);
+    setExportOptions(draft.exportOptions);
+    goToStep(draft.step as WizardStep);
+    storage.saveConfig(draft.config);
+    if (draft.payload) storage.savePayload(draft.payload);
+    storage.saveExportOptions(draft.exportOptions);
+    storage.saveStep(draft.step);
+  };
+
+  // ─── Toast bridge (used by DraftManager + AnalyticsDashboard) ────────────
+  const handleToast = (variant: 'success' | 'error' | 'warning' | 'info', title: string, msg?: string) => {
+    toast[variant](title, msg);
+  };
+
+  // ─── Draft count refresh ──────────────────────────────────────────────────
+  const refreshDraftCount = () => setDraftCount(drafts.count());
 
   if (!hydrated) {
     return (
@@ -94,11 +117,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+
+      {/* ─── Persistent Header ─────────────────────────────── */}
       <Header
         currentStep={currentStep}
+        draftCount={draftCount}
         onStepClick={step => goToStep(step)}
+        onOpenDrafts={() => { setShowDrafts(true); refreshDraftCount(); }}
+        onOpenAnalytics={() => setShowAnalytics(true)}
       />
 
+      {/* ─── Wizard Steps ──────────────────────────────────── */}
       <main className="flex-1">
         {currentStep === 1 && (
           <Step1Configure
@@ -120,7 +149,7 @@ export default function App() {
           <Step3Ingest
             onBack={() => goToStep(2)}
             onNext={() => goToStep(4)}
-            onPayloadLoaded={(p) => setPayload(p)}
+            onPayloadLoaded={p => setPayload(p)}
             existingPayload={payload}
           />
         )}
@@ -145,12 +174,14 @@ export default function App() {
           />
         )}
 
-        {/* Guard: if step 4 or 5 without payload, redirect */}
+        {/* Guard: steps 4/5 without payload */}
         {(currentStep === 4 || currentStep === 5) && !payload && (
           <div className="max-w-md mx-auto px-4 py-16 text-center">
             <div className="text-6xl mb-4">⚠️</div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">No payload found</h2>
-            <p className="text-gray-500 mb-6">You need to complete Step 3 (Ingest) before proceeding here.</p>
+            <p className="text-gray-500 mb-6">
+              Complete Step 3 (Ingest) before proceeding here.
+            </p>
             <button
               onClick={() => goToStep(3)}
               className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
@@ -161,13 +192,35 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
+      {/* ─── Footer ────────────────────────────────────────── */}
       <footer className="border-t border-gray-200 bg-white py-4 px-4 text-center">
         <p className="text-xs text-gray-400">
-          OPX Playbook Builder &nbsp;·&nbsp; Bilingual Corporate Training Matrix Factory &nbsp;·&nbsp;
-          All data stored locally — no backend, no API keys
+          OPX Playbook Builder &nbsp;·&nbsp; Bilingual Corporate Training Matrix Factory
+          &nbsp;·&nbsp; All data stored locally — no backend, no API keys
         </p>
       </footer>
+
+      {/* ─── Draft Manager Modal ───────────────────────────── */}
+      <DraftManager
+        open={showDrafts}
+        onClose={() => { setShowDrafts(false); refreshDraftCount(); }}
+        currentStep={currentStep}
+        currentConfig={config}
+        currentPayload={payload}
+        currentExportOptions={exportOptions}
+        onLoad={handleLoadDraft}
+        onToast={handleToast}
+      />
+
+      {/* ─── Analytics Dashboard Modal ─────────────────────── */}
+      <AnalyticsDashboard
+        open={showAnalytics}
+        onClose={() => setShowAnalytics(false)}
+        onToast={handleToast}
+      />
+
+      {/* ─── Toast Container ───────────────────────────────── */}
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }
