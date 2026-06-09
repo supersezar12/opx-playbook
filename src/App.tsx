@@ -19,7 +19,7 @@ const DEFAULT_CONFIG: AppConfig = {
   industry: '', department: '', productCategories: [], jobTitle: '', seniorityId: '', policyText: '',
 };
 const DEFAULT_EXPORT: ExportOptions = {
-  antiCopy: true, bilingualToggle: true, matrixTitle: '',
+  antiCopy: true, bilingualToggle: true, matrixTitle: '', templateId: 'executive',
 };
 
 export default function App() {

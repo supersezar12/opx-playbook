@@ -80,6 +80,7 @@ export interface ExportOptions {
   antiCopy: boolean;
   bilingualToggle: boolean;
   matrixTitle: string;
+  templateId: 'executive' | 'academy' | 'ops';   // selected HTML template
 }
 
 // ─── i18n Labels ──────────────────────────────────────────────────────────────
