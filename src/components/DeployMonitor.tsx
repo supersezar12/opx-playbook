@@ -92,7 +92,7 @@ export const DeployMonitor: React.FC<DeployMonitorProps> = ({ open, onClose }) =
   const [rollingBack,     setRollingBack]     = useState(false);
   const [lastRefresh,     setLastRefresh]     = useState<Date | null>(null);
   const [autoDeployed,    setAutoDeployed]    = useState(false);
-  const [online,          setOnline]          = useState(navigator.onLine);
+  const [online,          setOnline]          = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [confirmRollback, setConfirmRollback] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

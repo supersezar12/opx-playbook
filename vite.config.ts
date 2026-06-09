@@ -1,25 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { execSync } from 'child_process'
 
-// Stamp current git commit SHA into the bundle at build time
-function getGitSha(): string {
-  try {
-    return execSync('git rev-parse HEAD', { stdio: ['pipe', 'pipe', 'pipe'] })
-      .toString().trim();
-  } catch {
-    return 'dev';
-  }
-}
-
-const DEPLOY_COMMIT = getGitSha();
+// NOTE: child_process / execSync removed — not supported in Lovable's build sandbox.
+// The commit SHA is injected as 'dev' during Lovable preview builds.
+// In a real CI/CD pipeline, set VITE_COMMIT_SHA env var and it will be used instead.
+const DEPLOY_COMMIT =
+  process.env.VITE_COMMIT_SHA ||
+  process.env.COMMIT_REF ||       // Netlify
+  process.env.VERCEL_GIT_COMMIT_SHA || // Vercel
+  'dev';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   define: {
-    // Replaced verbatim in compiled output — makes current commit available
-    // to the browser bundle without any backend
     __DEPLOY_COMMIT__: JSON.stringify(DEPLOY_COMMIT),
   },
   server: {
