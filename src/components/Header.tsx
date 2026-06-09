@@ -1,13 +1,19 @@
 import React from 'react';
 import { BookOpen, ChevronRight, Save, BarChart3, Zap } from 'lucide-react';
-import type { WizardStep } from '../types';
+import { DeployStatusBadge } from './DeployMonitor';
+import type { WizardStep }   from '../types';
+import type { BuildState }   from '../lib/deployMonitor';
 
 interface HeaderProps {
-  currentStep: WizardStep;
-  draftCount: number;
-  onStepClick?: (step: WizardStep) => void;
-  onOpenDrafts: () => void;
-  onOpenAnalytics: () => void;
+  currentStep:       WizardStep;
+  draftCount:        number;
+  deployState:       BuildState;
+  deployIsAhead:     boolean;
+  deployAheadCount:  number;
+  onStepClick?:      (step: WizardStep) => void;
+  onOpenDrafts:      () => void;
+  onOpenAnalytics:   () => void;
+  onOpenDeploy:      () => void;
 }
 
 const STEPS: { id: WizardStep; label: string }[] = [
@@ -19,18 +25,20 @@ const STEPS: { id: WizardStep; label: string }[] = [
 ];
 
 export const Header: React.FC<HeaderProps> = ({
-  currentStep, draftCount, onStepClick, onOpenDrafts, onOpenAnalytics,
+  currentStep, draftCount, deployState, deployIsAhead, deployAheadCount,
+  onStepClick, onOpenDrafts, onOpenAnalytics, onOpenDeploy,
 }) => {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/6"
-      style={{ background: 'rgba(10,13,20,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
-
-      {/* Top gold accent line */}
+    <header
+      className="sticky top-0 z-40 border-b border-white/6"
+      style={{ background: 'rgba(10,13,20,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+    >
+      {/* Gold accent line */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
 
-      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
 
-        {/* ── Logo ────────────────────────────────────────── */}
+        {/* ── Logo ── */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="relative w-8 h-8 flex-shrink-0">
             <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 opacity-20 blur-sm" />
@@ -44,13 +52,12 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* ── Step Wizard Nav ─────────────────────────────── */}
+        {/* ── Step Wizard Nav ── */}
         <nav className="flex items-center gap-0.5 flex-1 justify-center" aria-label="Wizard steps">
           {STEPS.map((step, idx) => {
             const isActive    = step.id === currentStep;
             const isCompleted = step.id < currentStep;
             const isClickable = isCompleted && !!onStepClick;
-
             return (
               <React.Fragment key={step.id}>
                 <button
@@ -68,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <span className={[
                     'w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
-                    isActive    ? 'bg-amber-500/30 text-amber-300'
+                    isActive     ? 'bg-amber-500/30 text-amber-300'
                     : isCompleted ? 'bg-emerald-500/20 text-emerald-400'
                     : 'bg-white/5 text-slate-600',
                   ].join(' ')}>
@@ -76,7 +83,6 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                   <span className="hidden md:inline">{step.label}</span>
                 </button>
-
                 {idx < STEPS.length - 1 && (
                   <ChevronRight className="h-3 w-3 text-slate-700 flex-shrink-0 mx-0.5" />
                 )}
@@ -85,8 +91,18 @@ export const Header: React.FC<HeaderProps> = ({
           })}
         </nav>
 
-        {/* ── Right Actions ───────────────────────────────── */}
+        {/* ── Right Actions ── */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
+
+          {/* Deploy status badge */}
+          <DeployStatusBadge
+            state={deployState}
+            isAhead={deployIsAhead}
+            aheadCount={deployAheadCount}
+            onClick={onOpenDeploy}
+          />
+
+          {/* Drafts */}
           <button
             onClick={onOpenDrafts}
             title="Draft Manager"
@@ -101,6 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </button>
 
+          {/* Analytics */}
           <button
             onClick={onOpenAnalytics}
             title="Analytics"
@@ -110,6 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Analytics</span>
           </button>
 
+          {/* Step counter */}
           <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-white/8 ml-1">
             <Zap className="h-3 w-3 text-amber-500 animate-pulse-gold" />
             <span className="text-xs text-slate-500">{currentStep}/5</span>

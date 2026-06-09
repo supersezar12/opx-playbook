@@ -1,18 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Header }           from './components/Header';
-import { Step1Configure }   from './components/steps/Step1Configure';
-import { Step2Generate }    from './components/steps/Step2Generate';
-import { Step3Ingest }      from './components/steps/Step3Ingest';
-import { Step4Audit }       from './components/steps/Step4Audit';
-import { Step5Export }      from './components/steps/Step5Export';
-import { DraftManager }     from './components/DraftManager';
+import { Header }             from './components/Header';
+import { Step1Configure }     from './components/steps/Step1Configure';
+import { Step2Generate }      from './components/steps/Step2Generate';
+import { Step3Ingest }        from './components/steps/Step3Ingest';
+import { Step4Audit }         from './components/steps/Step4Audit';
+import { Step5Export }        from './components/steps/Step5Export';
+import { DraftManager }       from './components/DraftManager';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { DeployMonitor }      from './components/DeployMonitor';
 import { ToastContainer, useToast } from './components/ui/Toast';
-import { DiagnosticsPanel } from './components/DiagnosticsPanel';
-import { storage }          from './lib/localStorage';
-import { drafts }           from './lib/drafts';
-import { analytics }        from './lib/analytics';
-import { DEPARTMENTS_DATA } from './data/departments';
+import { DiagnosticsPanel }   from './components/DiagnosticsPanel';
+import { storage }            from './lib/localStorage';
+import { drafts }             from './lib/drafts';
+import { analytics }          from './lib/analytics';
+import { DEPARTMENTS_DATA }   from './data/departments';
+import {
+  initDeployRecord, getDeployStatus, markDeployed,
+  CURRENT_COMMIT,
+} from './lib/deployMonitor';
+import type { BuildState }    from './lib/deployMonitor';
 import type { AppConfig, TrainingPayload, ExportOptions, WizardStep, DraftSnapshot } from './types';
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -31,15 +37,21 @@ export default function App() {
   const [draftCount,     setDraftCount]     = useState(0);
   const [showDrafts,     setShowDrafts]     = useState(false);
   const [showAnalytics,  setShowAnalytics]  = useState(false);
+  const [showDeploy,     setShowDeploy]     = useState(false);
+
+  // Deploy monitor state (lightweight — just enough for the header badge)
+  const [deployState,      setDeployState]      = useState<BuildState>('unknown');
+  const [deployIsAhead,    setDeployIsAhead]    = useState(false);
+  const [deployAheadCount, setDeployAheadCount] = useState(0);
 
   const { toasts, toast, dismiss } = useToast();
 
-  // ─── Session hydration ────────────────────────────────────────────────────
+  // ── Session hydration ────────────────────────────────────────────────────
   useEffect(() => {
-    const savedConfig   = storage.loadConfig();
-    const savedPayload  = storage.loadPayload();
-    const savedStep     = storage.loadStep();
-    const savedExport   = storage.loadExportOptions();
+    const savedConfig  = storage.loadConfig();
+    const savedPayload = storage.loadPayload();
+    const savedStep    = storage.loadStep();
+    const savedExport  = storage.loadExportOptions();
 
     if (savedConfig)  setConfig({ ...DEFAULT_CONFIG, ...savedConfig, productCategories: savedConfig.productCategories ?? [] });
     if (savedPayload) setPayload(savedPayload);
@@ -49,9 +61,24 @@ export default function App() {
     setDraftCount(drafts.count());
     analytics.track('session_started');
     setHydrated(true);
+
+    // Initialise deploy record and stamp current commit as deployed
+    initDeployRecord();
+    markDeployed(CURRENT_COMMIT);
+
+    // Silent background status check
+    getDeployStatus().then(s => {
+      setDeployState(s.buildState);
+      setDeployIsAhead(s.isAhead);
+      setDeployAheadCount(s.aheadCount);
+      if (s.isAhead) {
+        toast.info(`${s.aheadCount} new commit${s.aheadCount > 1 ? 's' : ''} on GitHub`, 'Open Deploy Monitor to view & redeploy.');
+      }
+    }).catch(() => { /* silently ignore — no network access in some environments */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Persist on change ────────────────────────────────────────────────────
+  // ── Persist config ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!hydrated) return;
     storage.saveConfig(config);
@@ -64,24 +91,14 @@ export default function App() {
         : '';
       const titleParts = [config.jobTitle, deptName || config.industry, catSuffix, 'Training Matrix']
         .filter(Boolean).join(' - ');
-      setExportOptions(prev => ({
-        ...prev,
-        matrixTitle: prev.matrixTitle || titleParts,
-      }));
+      setExportOptions(prev => ({ ...prev, matrixTitle: prev.matrixTitle || titleParts }));
     }
   }, [config, hydrated]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    storage.saveStep(currentStep);
-  }, [currentStep, hydrated]);
+  useEffect(() => { if (hydrated) storage.saveStep(currentStep); }, [currentStep, hydrated]);
+  useEffect(() => { if (hydrated) storage.saveExportOptions(exportOptions); }, [exportOptions, hydrated]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    storage.saveExportOptions(exportOptions);
-  }, [exportOptions, hydrated]);
-
-  // ─── Navigation ───────────────────────────────────────────────────────────
+  // ── Navigation ───────────────────────────────────────────────────────────
   const goToStep = useCallback((step: WizardStep) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setCurrentStep(step);
@@ -94,7 +111,6 @@ export default function App() {
     goToStep(1);
   };
 
-  // ─── Draft load handler ───────────────────────────────────────────────────
   const handleLoadDraft = (draft: DraftSnapshot) => {
     setConfig({ ...DEFAULT_CONFIG, ...draft.config, productCategories: draft.config.productCategories ?? [] });
     if (draft.payload) setPayload(draft.payload);
@@ -106,12 +122,10 @@ export default function App() {
     storage.saveStep(draft.step);
   };
 
-  // ─── Toast bridge (used by DraftManager + AnalyticsDashboard) ────────────
   const handleToast = (variant: 'success' | 'error' | 'warning' | 'info', title: string, msg?: string) => {
     toast[variant](title, msg);
   };
 
-  // ─── Draft count refresh ──────────────────────────────────────────────────
   const refreshDraftCount = () => setDraftCount(drafts.count());
 
   if (!hydrated) {
@@ -119,7 +133,7 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-500">Restoring your session...</p>
+          <p className="text-sm text-slate-500">Restoring your session…</p>
         </div>
       </div>
     );
@@ -128,70 +142,30 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-base)' }}>
 
-      {/* ─── Persistent Header ─────────────────────────────── */}
       <Header
         currentStep={currentStep}
         draftCount={draftCount}
+        deployState={deployState}
+        deployIsAhead={deployIsAhead}
+        deployAheadCount={deployAheadCount}
         onStepClick={step => goToStep(step)}
         onOpenDrafts={() => { setShowDrafts(true); refreshDraftCount(); }}
         onOpenAnalytics={() => setShowAnalytics(true)}
+        onOpenDeploy={() => setShowDeploy(true)}
       />
 
-      {/* ─── Wizard Steps ──────────────────────────────────── */}
       <main className="flex-1">
-        {currentStep === 1 && (
-          <Step1Configure
-            config={config}
-            onConfigChange={setConfig}
-            onNext={() => goToStep(2)}
-          />
-        )}
+        {currentStep === 1 && <Step1Configure config={config} onConfigChange={setConfig} onNext={() => goToStep(2)} />}
+        {currentStep === 2 && <Step2Generate  config={config} onBack={() => goToStep(1)} onNext={() => goToStep(3)} />}
+        {currentStep === 3 && <Step3Ingest   onBack={() => goToStep(2)} onNext={() => goToStep(4)} onPayloadLoaded={p => setPayload(p)} existingPayload={payload} />}
+        {currentStep === 4 && payload && <Step4Audit payload={payload} onPayloadUpdate={setPayload} onBack={() => goToStep(3)} onNext={() => goToStep(5)} />}
+        {currentStep === 5 && payload && <Step5Export payload={payload} config={config} options={exportOptions} onOptionsChange={setExportOptions} onBack={() => goToStep(4)} onStartNew={handleStartNew} />}
 
-        {currentStep === 2 && (
-          <Step2Generate
-            config={config}
-            onBack={() => goToStep(1)}
-            onNext={() => goToStep(3)}
-          />
-        )}
-
-        {currentStep === 3 && (
-          <Step3Ingest
-            onBack={() => goToStep(2)}
-            onNext={() => goToStep(4)}
-            onPayloadLoaded={p => setPayload(p)}
-            existingPayload={payload}
-          />
-        )}
-
-        {currentStep === 4 && payload && (
-          <Step4Audit
-            payload={payload}
-            onPayloadUpdate={setPayload}
-            onBack={() => goToStep(3)}
-            onNext={() => goToStep(5)}
-          />
-        )}
-
-        {currentStep === 5 && payload && (
-          <Step5Export
-            payload={payload}
-            config={config}
-            options={exportOptions}
-            onOptionsChange={setExportOptions}
-            onBack={() => goToStep(4)}
-            onStartNew={handleStartNew}
-          />
-        )}
-
-        {/* Guard: steps 4/5 without payload */}
         {(currentStep === 4 || currentStep === 5) && !payload && (
           <div className="max-w-md mx-auto px-4 py-16 text-center">
             <div className="text-6xl mb-4">⚠️</div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">No payload found</h2>
-            <p className="text-gray-500 mb-6">
-              Complete Step 3 (Ingest) before proceeding here.
-            </p>
+            <h2 className="text-xl font-bold text-slate-100 mb-2">No payload found</h2>
+            <p className="text-slate-500 mb-6">Complete Step 3 (Ingest) before proceeding.</p>
             <button
               onClick={() => goToStep(3)}
               className="bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 px-6 py-3 rounded-xl font-semibold hover:from-amber-400 hover:to-yellow-300 transition-colors"
@@ -202,15 +176,12 @@ export default function App() {
         )}
       </main>
 
-      {/* ─── Footer ────────────────────────────────────────── */}
-      <footer className="border-t border-white/6 py-4 px-4 text-center" style={{ background: "rgba(10,13,20,0.95)" }}>
+      <footer className="border-t border-white/6 py-4 px-4 text-center" style={{ background: 'rgba(10,13,20,0.95)' }}>
         <p className="text-xs text-slate-600">
-          OPX Playbook Builder &nbsp;·&nbsp; Bilingual Corporate Training Matrix Factory
-          &nbsp;·&nbsp; All data stored locally — no backend, no API keys
+          OPX Playbook Builder &nbsp;·&nbsp; v1.6 &nbsp;·&nbsp; All data local — no backend, no API keys
         </p>
       </footer>
 
-      {/* ─── Draft Manager Modal ───────────────────────────── */}
       <DraftManager
         open={showDrafts}
         onClose={() => { setShowDrafts(false); refreshDraftCount(); }}
@@ -222,14 +193,25 @@ export default function App() {
         onToast={handleToast}
       />
 
-      {/* ─── Analytics Dashboard Modal ─────────────────────── */}
       <AnalyticsDashboard
         open={showAnalytics}
         onClose={() => setShowAnalytics(false)}
         onToast={handleToast}
       />
 
-      {/* ─── Toast Container ───────────────────────────────── */}
+      <DeployMonitor
+        open={showDeploy}
+        onClose={() => {
+          setShowDeploy(false);
+          // Refresh badge state after panel closes
+          getDeployStatus().then(s => {
+            setDeployState(s.buildState);
+            setDeployIsAhead(s.isAhead);
+            setDeployAheadCount(s.aheadCount);
+          }).catch(() => {});
+        }}
+      />
+
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
       <DiagnosticsPanel />
     </div>
